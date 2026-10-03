@@ -1,0 +1,794 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}</style></head><body>
+<title>Lead Manager Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: blueprint document. Sticky section index on the left (desktop), one reading column, diagrams and tables scroll inside their own frames on phones. */
+:root {
+  --bg: #f4f6f7;
+  --surface: #ffffff;
+  --region: #eef3f3;
+  --ink: #142028;
+  --muted: #566771;
+  --line: #d8e0e3;
+  --line-strong: #a9b8be;
+  --accent: #0b7a71;
+  --accent-ink: #ffffff;
+  --accent-soft: #dff1ee;
+  --team: #3a5796;
+  --team-soft: #e4eaf7;
+  --ok: #1d7438;
+  --ok-soft: #e1f2e5;
+  --warn: #a35a06;
+  --warn-soft: #fbefdc;
+  --risk: #b02a1f;
+  --risk-soft: #fbe5e2;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1519; --surface: #152027; --region: #13262a; --ink: #e4ecef; --muted: #93a5ae;
+    --line: #253540; --line-strong: #47606b; --accent: #3fc1b3; --accent-ink: #06201d; --accent-soft: #123331;
+    --team: #93aaea; --team-soft: #1b2742; --ok: #62c27f; --ok-soft: #14301d; --warn: #f0aa4c; --warn-soft: #36270f;
+    --risk: #f08174; --risk-soft: #3a1b18; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1519; --surface: #152027; --region: #13262a; --ink: #e4ecef; --muted: #93a5ae;
+  --line: #253540; --line-strong: #47606b; --accent: #3fc1b3; --accent-ink: #06201d; --accent-soft: #123331;
+  --team: #93aaea; --team-soft: #1b2742; --ok: #62c27f; --ok-soft: #14301d; --warn: #f0aa4c; --warn-soft: #36270f;
+  --risk: #f08174; --risk-soft: #3a1b18; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.58; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1220px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 72px; }
+
+/* Hero */
+.hero { display: grid; gap: 18px; padding-block: 8px 28px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.1rem, 4.4vw, 3.3rem); line-height: 1.04; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+.lede { font-size: 1.12rem; max-width: 68ch; margin: 0; color: var(--ink); }
+.decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 6px; }
+.decision { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.decision .k { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.decision h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem; margin: 0; line-height: 1.2; }
+.decision p { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+/* Page layout */
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 44px; margin-top: 28px; }
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc a { display: grid; grid-template-columns: 30px 1fr; gap: 4px; text-decoration: none; color: var(--muted); font-size: 13.5px; padding: 5px 8px; border-radius: 6px; }
+.toc a span:first-child { font-family: var(--font-mono); font-size: 12px; color: var(--line-strong); padding-top: 1px; }
+.toc a:hover { background: var(--surface); color: var(--ink); }
+main { min-width: 0; display: grid; gap: 64px; }
+section { min-width: 0; display: grid; gap: 18px; scroll-margin-top: 20px; }
+.sec-head { display: grid; gap: 6px; }
+.sec-head .eyebrow { color: var(--accent); }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 2.6vw, 1.95rem); line-height: 1.12; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--font-display); font-weight: 500; font-size: 1.18rem; margin: 0; line-height: 1.25; text-wrap: balance; }
+p { margin: 0; }
+.prose { max-width: 70ch; display: grid; gap: 10px; }
+.muted { color: var(--muted); }
+.small { font-size: 13.5px; }
+
+/* Chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .02em; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); white-space: nowrap; }
+.chip.ai { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.chip.team { background: var(--team-soft); color: var(--team); border-color: transparent; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.chip.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.chip.risk { background: var(--risk-soft); color: var(--risk); border-color: transparent; }
+
+/* Diagrams */
+figure { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; height: auto; min-width: 780px; color: var(--ink); }
+figcaption { font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+.box { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.2; }
+.box.ai { fill: var(--accent-soft); stroke: var(--accent); }
+.box.solid { fill: var(--accent); stroke: var(--accent); }
+.box.team { fill: var(--team-soft); stroke: var(--team); }
+.region { fill: var(--region); stroke: var(--line-strong); stroke-dasharray: 5 5; stroke-width: 1; }
+.edge { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+.edge.ai { stroke: var(--accent); }
+.edge.team { stroke: var(--team); }
+.edge.dash { stroke-dasharray: 5 4; }
+.ah { fill: var(--muted); }
+.ah.ai { fill: var(--accent); }
+.ah.team { fill: var(--team); }
+.t-title { font-family: var(--font-body); font-weight: 600; font-size: 13px; fill: var(--ink); }
+.t-title.inv { fill: var(--accent-ink); }
+.t-sub { font-family: var(--font-mono); font-size: 10.5px; fill: var(--muted); }
+.t-sub.inv { fill: var(--accent-ink); }
+.t-edge { font-family: var(--font-mono); font-size: 10.5px; fill: var(--muted); }
+.t-edge.ai { fill: var(--accent); }
+.t-edge.team { fill: var(--team); }
+.t-band { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; fill: var(--muted); }
+.t-node { font-family: var(--font-body); font-size: 12px; fill: var(--ink); }
+.dot-ai { fill: var(--accent); }
+.dot-team { fill: var(--team); }
+.dot-ring { fill: var(--surface); stroke: var(--team); stroke-width: 2; }
+.dot-done { fill: var(--team); }
+.dot-booked { fill: var(--surface); stroke: var(--accent); stroke-width: 2.4; }
+.dot-due { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.4; }
+.band-ai { stroke: var(--accent); stroke-width: 3; }
+.band-team { stroke: var(--team); stroke-width: 3; }
+
+/* Cards & grids */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card h3 { font-size: 1.05rem; }
+.card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.card .head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; display: grid; gap: 4px; max-width: 80ch; }
+.callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.callout strong { font-weight: 600; }
+
+/* Stage cards */
+.stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; counter-reset: stage; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 7px; align-content: start; min-width: 0; counter-increment: stage; }
+.stage .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.stage .num::before { content: counter(stage, decimal-leading-zero); font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.stage h3 { font-size: 1.02rem; }
+.stage p { font-size: 13.5px; }
+.stage .exits { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 7px; }
+.stage .exits b { font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); margin-right: 4px; }
+
+/* Pipeline steps */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; counter-reset: step; }
+.steps li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.steps li::before { content: "Step " counter(step); font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.steps h3 { font-size: 1rem; }
+.steps p { font-size: 13.5px; color: var(--muted); }
+
+/* Rollout dial */
+.dial { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.dial > div { padding: 14px 16px; display: grid; gap: 6px; align-content: start; border-right: 1px solid var(--line); min-width: 0; }
+.dial > div:last-child { border-right: 0; }
+.dial .lvl { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dial > div.on { background: var(--accent-soft); }
+.dial > div.on .lvl { color: var(--accent); }
+.dial p { font-size: 13.5px; }
+.dial .gate { font-size: 12.5px; color: var(--muted); }
+
+/* Lists of do / don't */
+.dodont { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.dodont ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+thead th { font-family: var(--font-mono); font-weight: 500; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+tbody th { font-weight: 600; }
+.t-roles { min-width: 860px; }
+.t-roles td { text-align: center; font-family: var(--font-mono); }
+.t-roles thead th:not(:first-child) { text-align: center; }
+.full { color: var(--ok); font-weight: 500; }
+.part { color: var(--warn); }
+.none { color: var(--line-strong); }
+.t-risk { min-width: 980px; }
+.t-tools { min-width: 940px; }
+.t-tools tr.rec { background: var(--accent-soft); }
+.t-alerts { min-width: 760px; }
+.t-cost { min-width: 620px; }
+.t-cost td.num { font-variant-numeric: tabular-nums; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+
+/* Notification mock */
+.notif { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; max-width: 420px; box-shadow: 0 6px 18px rgba(10, 30, 40, .08); }
+.notif .app { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.notif b { font-weight: 600; }
+.notif .brief { font-size: 13.5px; color: var(--muted); }
+.notif .clock { font-family: var(--font-mono); font-size: 12px; color: var(--warn); }
+
+/* Gantt */
+.gantt { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.gantt-grid { display: grid; grid-template-columns: 230px repeat(18, minmax(26px, 1fr)); row-gap: 8px; min-width: 760px; align-items: center; }
+.gantt-grid .wk { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.gantt-grid .lbl { font-size: 13px; padding-right: 10px; line-height: 1.3; }
+.gantt-grid .lbl small { display: block; color: var(--muted); font-size: 12px; }
+.bar { height: 22px; border-radius: 5px; background: var(--team-soft); border: 1px solid var(--team); }
+.bar.ai { background: var(--accent-soft); border-color: var(--accent); }
+.bar.ext { background: var(--warn-soft); border-color: var(--warn); border-style: dashed; }
+
+/* Questions */
+.questions { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: q; }
+.questions li { counter-increment: q; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 14px 60px; position: relative; display: grid; gap: 4px; }
+.questions li::before { content: "Q" counter(q); position: absolute; left: 16px; top: 14px; font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: var(--accent); }
+.questions b { font-weight: 600; }
+.questions span { font-size: 13.5px; color: var(--muted); }
+
+.sources { columns: 2 320px; column-gap: 28px; font-size: 13px; padding-left: 18px; margin: 0; }
+.sources li { break-inside: avoid; margin-bottom: 6px; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-block: 8px; overflow-x: auto; margin-inline: -20px; padding-inline: 20px; border-bottom: 1px solid var(--line); }
+  .toc ol { display: flex; gap: 4px; width: max-content; }
+  .toc a { display: block; white-space: nowrap; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .toc a span:first-child { display: none; }
+  .dial { grid-template-columns: minmax(0, 1fr); }
+  .dial > div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .dial > div:last-child { border-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="status">
+      <span class="eyebrow">Plan for approval · v1 · 3 October 2026</span>
+      <span class="chip warn">Nothing built or connected yet</span>
+    </div>
+    <h1>Lead Manager Blueprint</h1>
+    <p class="lede">A private lead and client system for organisations that win clients through Instagram and TikTok DMs. Claude answers every DM in seconds using what worked in your past conversations. When a phone number appears, a named person gets the lead straight away. The system then follows the client through appointments, treatment plans with several procedures, sessions, aftercare and return visits.</p>
+    <div class="decisions" aria-label="Five key recommendations">
+      <div class="decision"><span class="k">Channels</span><h3>Official APIs only</h3><p>Instagram Messaging API through your own approved Meta app. TikTok Business Messaging API where your region allows it. No scraping, no shared passwords.</p></div>
+      <div class="decision"><span class="k">Past DMs</span><h3>Official data exports</h3><p>The APIs return only the last 20 messages of a chat, so the full history comes from each platform's “Download your data” JSON file.</p></div>
+      <div class="decision"><span class="k">Brain</span><h3>Claude in three places</h3><p>Claude writes replies in real time, learns from history in batch jobs, and watches and runs the whole system through your own MCP server.</p></div>
+      <div class="decision"><span class="k">Platform</span><h3>Cloudflare and one app</h3><p>Workers, D1, R2 and Queues on Cloudflare's free tier to start. One web app that installs on phones, later wrapped as private iOS and Android apps.</p></div>
+      <div class="decision"><span class="k">People</span><h3>Humans own the call</h3><p>A shared number triggers an alert, an AI call brief and a 15‑minute clock for a named coordinator. Any stage can be overridden, with the reason logged.</p></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <ol>
+        <li><a href="#architecture"><span>01</span><span>How it fits together</span></a></li>
+        <li><a href="#journey"><span>02</span><span>Client journey</span></a></li>
+        <li><a href="#learning"><span>03</span><span>Learning from past DMs</span></a></li>
+        <li><a href="#replies"><span>04</span><span>AI reply rules</span></a></li>
+        <li><a href="#features"><span>05</span><span>Feature map</span></a></li>
+        <li><a href="#access"><span>06</span><span>Logins and access</span></a></li>
+        <li><a href="#alerts"><span>07</span><span>Notifications</span></a></li>
+        <li><a href="#claude"><span>08</span><span>Claude as the brain</span></a></li>
+        <li><a href="#existing"><span>09</span><span>Existing tools</span></a></li>
+        <li><a href="#risks"><span>10</span><span>Risks and conflicts</span></a></li>
+        <li><a href="#roadmap"><span>11</span><span>Roadmap</span></a></li>
+        <li><a href="#costs"><span>12</span><span>Running costs</span></a></li>
+        <li><a href="#questions"><span>13</span><span>Questions for you</span></a></li>
+        <li><a href="#sources"><span>14</span><span>Sources</span></a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- 01 ARCHITECTURE -->
+      <section id="architecture">
+        <div class="sec-head"><span class="eyebrow">§01 · Architecture</span><h2>How the pieces fit together</h2></div>
+        <figure>
+          <div class="diagram">
+            <svg viewBox="0 0 990 432" role="img" aria-label="Architecture: Instagram and TikTok DMs arrive by webhook at a channel gateway on Cloudflare, go through a queue to the reply engine which calls the Claude API, and replies go back through the platforms' send APIs. Leads are stored in D1 and R2; rules and alerts notify team phones; the team app API and an MCP server for Claude apps both read and write the same store. Past DM exports are analysed by Claude batch jobs into a playbook the reply engine follows, and outcomes feed back into the analysis.">
+              <defs>
+                <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker>
+                <marker id="ahA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah ai"/></marker>
+                <marker id="ahT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah team"/></marker>
+              </defs>
+              <rect x="200" y="36" width="574" height="384" rx="14" class="region"/>
+              <text x="216" y="60" class="t-band">CLOUDFLARE · YOUR ACCOUNT</text>
+
+              <!-- left: platforms -->
+              <text x="96" y="44" class="t-edge" text-anchor="middle">DM in · reply out</text>
+              <rect x="16" y="56" width="160" height="48" rx="10" class="box"/>
+              <text x="96" y="76" class="t-title" text-anchor="middle">Instagram</text>
+              <text x="96" y="93" class="t-sub" text-anchor="middle">Messaging API</text>
+              <rect x="16" y="120" width="160" height="48" rx="10" class="box"/>
+              <text x="96" y="140" class="t-title" text-anchor="middle">TikTok</text>
+              <text x="96" y="157" class="t-sub" text-anchor="middle">Business Messaging API</text>
+              <rect x="16" y="340" width="160" height="56" rx="10" class="box"/>
+              <text x="96" y="363" class="t-title" text-anchor="middle">Past DMs</text>
+              <text x="96" y="381" class="t-sub" text-anchor="middle">official JSON exports</text>
+
+              <!-- row A -->
+              <rect x="220" y="80" width="150" height="56" rx="10" class="box"/>
+              <text x="295" y="104" class="t-title" text-anchor="middle">Channel gateway</text>
+              <text x="295" y="122" class="t-sub" text-anchor="middle">Worker · webhooks</text>
+              <rect x="412" y="80" width="150" height="56" rx="10" class="box ai"/>
+              <text x="487" y="104" class="t-title" text-anchor="middle">Reply engine</text>
+              <text x="487" y="122" class="t-sub" text-anchor="middle">Worker · guardrails</text>
+
+              <!-- row B -->
+              <rect x="220" y="210" width="150" height="56" rx="10" class="box ai"/>
+              <text x="295" y="234" class="t-title" text-anchor="middle">Playbook</text>
+              <text x="295" y="252" class="t-sub" text-anchor="middle">versioned · approved</text>
+              <rect x="412" y="210" width="150" height="56" rx="10" class="box"/>
+              <text x="487" y="234" class="t-title" text-anchor="middle">Lead &amp; client store</text>
+              <text x="487" y="252" class="t-sub" text-anchor="middle">D1 · R2 files</text>
+              <rect x="604" y="210" width="150" height="56" rx="10" class="box"/>
+              <text x="679" y="234" class="t-title" text-anchor="middle">Rules &amp; alerts</text>
+              <text x="679" y="252" class="t-sub" text-anchor="middle">SLA clocks · cron</text>
+
+              <!-- row C -->
+              <rect x="220" y="340" width="150" height="56" rx="10" class="box ai"/>
+              <text x="295" y="364" class="t-title" text-anchor="middle">History analysis</text>
+              <text x="295" y="382" class="t-sub" text-anchor="middle">Claude batch jobs</text>
+              <rect x="412" y="340" width="150" height="56" rx="10" class="box"/>
+              <text x="487" y="364" class="t-title" text-anchor="middle">Team app API</text>
+              <text x="487" y="382" class="t-sub" text-anchor="middle">Worker · roles</text>
+              <rect x="604" y="340" width="150" height="56" rx="10" class="box ai"/>
+              <text x="679" y="364" class="t-title" text-anchor="middle">MCP server</text>
+              <text x="679" y="382" class="t-sub" text-anchor="middle">Worker · OAuth</text>
+
+              <!-- right column -->
+              <rect x="814" y="80" width="160" height="56" rx="10" class="box solid"/>
+              <text x="894" y="104" class="t-title inv" text-anchor="middle">Claude API</text>
+              <text x="894" y="122" class="t-sub inv" text-anchor="middle">writes every reply</text>
+              <rect x="814" y="210" width="160" height="56" rx="10" class="box team"/>
+              <text x="894" y="234" class="t-title" text-anchor="middle">Team phones &amp; web</text>
+              <text x="894" y="252" class="t-sub" text-anchor="middle">PWA · iOS · Android</text>
+              <rect x="814" y="340" width="160" height="56" rx="10" class="box ai"/>
+              <text x="894" y="364" class="t-title" text-anchor="middle">Claude apps</text>
+              <text x="894" y="382" class="t-sub" text-anchor="middle">owner · managers</text>
+
+              <!-- edges -->
+              <path d="M176,80 L220,100" class="edge" marker-start="url(#ah)" marker-end="url(#ah)"/>
+              <path d="M176,144 L220,116" class="edge" marker-start="url(#ah)" marker-end="url(#ah)"/>
+              <path d="M370,108 L412,108" class="edge" marker-end="url(#ah)"/>
+              <text x="391" y="100" class="t-edge" text-anchor="middle">queue</text>
+              <path d="M562,100 L814,100" class="edge ai" marker-end="url(#ahA)"/>
+              <text x="688" y="92" class="t-edge ai" text-anchor="middle">chat + context + tools</text>
+              <path d="M814,118 L562,118" class="edge ai" marker-end="url(#ahA)"/>
+              <text x="688" y="134" class="t-edge ai" text-anchor="middle">reply or tool calls</text>
+              <path d="M487,136 L487,210" class="edge" marker-end="url(#ah)"/>
+              <text x="495" y="182" class="t-edge">create / update lead</text>
+              <path d="M295,210 V172 H450 V136" class="edge ai" marker-end="url(#ahA)"/>
+              <text x="372" y="166" class="t-edge ai" text-anchor="middle">playbook vN</text>
+              <path d="M295,340 L295,266" class="edge ai" marker-end="url(#ahA)"/>
+              <text x="287" y="307" class="t-edge ai" text-anchor="end">insights</text>
+              <path d="M176,368 L220,368" class="edge" marker-end="url(#ah)"/>
+              <path d="M412,250 H396 V374 H370" class="edge dash" marker-end="url(#ah)"/>
+              <text x="391" y="324" class="t-edge" text-anchor="end">outcomes</text>
+              <path d="M562,238 L604,238" class="edge" marker-end="url(#ah)"/>
+              <text x="583" y="230" class="t-edge" text-anchor="middle">events</text>
+              <path d="M754,238 L814,238" class="edge team" marker-end="url(#ahT)"/>
+              <text x="784" y="230" class="t-edge team" text-anchor="middle">alerts</text>
+              <path d="M894,266 V303 H540 V340" class="edge team" marker-start="url(#ahT)" marker-end="url(#ahT)"/>
+              <text x="717" y="297" class="t-edge team" text-anchor="middle">calls · bookings · notes</text>
+              <path d="M487,266 L487,340" class="edge" marker-start="url(#ah)" marker-end="url(#ah)"/>
+              <text x="479" y="307" class="t-edge" text-anchor="end">read / write</text>
+              <path d="M604,368 L562,368" class="edge" marker-end="url(#ah)"/>
+              <text x="583" y="360" class="t-edge" text-anchor="middle">API</text>
+              <path d="M814,368 L754,368" class="edge ai" marker-start="url(#ahA)" marker-end="url(#ahA)"/>
+              <text x="784" y="360" class="t-edge ai" text-anchor="middle">MCP</text>
+
+              <rect x="16" y="410" width="12" height="12" rx="3" class="box ai"/>
+              <text x="36" y="420" class="t-sub">Claude-powered part</text>
+            </svg>
+          </div>
+          <figcaption>DMs arrive by webhook. The reply engine asks Claude for the reply and sends it back through the platform's own send API. Every lead lands in one store that the team app, the alerts and Claude (through MCP) all share. Past DMs pass once through the analysis jobs and become the playbook the reply engine follows; won and lost outcomes keep improving it.</figcaption>
+        </figure>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Part</th><th>Built with</th><th>Why this choice</th></tr></thead>
+            <tbody>
+              <tr><th>Channel gateway</th><td>Cloudflare Worker + Queue</td><td>Checks Meta and TikTok webhook signatures, removes duplicates and queues every message so none is lost during a spike.</td></tr>
+              <tr><th>Reply engine</th><td>Worker calling the Claude API with tools</td><td>Loads the playbook and the person's history, can look up prices, availability and the lead record, and applies the guardrails in §04 before anything is sent.</td></tr>
+              <tr><th>Data</th><td>D1 (SQL), R2 (files), Durable Objects</td><td>D1 holds clients, journeys and tasks; R2 holds exports, attachments and consent forms; Durable Objects keep the live inbox in sync and stop two people replying to one chat.</td></tr>
+              <tr><th>Team app</th><td>One TypeScript web app on Cloudflare</td><td>Installs on any phone as a PWA from day one. The same code is wrapped with Capacitor for private iOS and Android apps with native push.</td></tr>
+              <tr><th>Logins</th><td>Per-person accounts, 2-factor or passkeys</td><td>Each member gets their own login and permissions (§06). Cloudflare Access (free up to 50 users) can sit in front of the admin area as a second lock.</td></tr>
+              <tr><th>MCP server</th><td>Worker using Cloudflare's Agents SDK</td><td>Lets Claude apps read and act on the system over OAuth, with the same permissions as the person who connects.</td></tr>
+              <tr><th>Multi-organisation</th><td>Workspace per organisation</td><td>Each organisation gets its own channels, playbook, users and data, so the second and third organisation plug in without a rebuild.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 02 JOURNEY -->
+      <section id="journey">
+        <div class="sec-head"><span class="eyebrow">§02 · Client journey</span><h2>From first DM to returning client</h2></div>
+        <figure>
+          <div class="diagram">
+            <svg viewBox="0 0 1000 190" role="img" aria-label="Journey spine: DM received and AI qualifies are handled by AI; after the handoff when contact is captured, the team handles call and confirm, appointment, consultation, treatment plan, sessions, completion and aftercare, and alumni. Returning clients loop back to call and confirm as a new episode on the same record.">
+              <defs>
+                <marker id="ahT2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah team"/></marker>
+              </defs>
+              <text x="104" y="22" class="t-band" text-anchor="middle">AI ON INSTAGRAM &amp; TIKTOK</text>
+              <line x1="22" y1="32" x2="188" y2="32" class="band-ai"/>
+              <text x="600" y="22" class="t-band" text-anchor="middle">YOUR TEAM, WITH ALERTS AND AI HELP</text>
+              <line x1="220" y1="32" x2="980" y2="32" class="band-team"/>
+              <path d="M946,94 V64 H352 V92" class="edge team dash" marker-end="url(#ahT2)"/>
+              <text x="649" y="57" class="t-edge team" text-anchor="middle">returning client → new episode, same record</text>
+              <line x1="55" y1="104" x2="946" y2="104" class="edge"/>
+              <line x1="204" y1="44" x2="204" y2="162" class="edge dash"/>
+              <text x="204" y="180" class="t-edge" text-anchor="middle">handoff: number shared or asked for</text>
+              <circle cx="55" cy="104" r="8" class="dot-ai"/>
+              <circle cx="154" cy="104" r="8" class="dot-ai"/>
+              <circle cx="253" cy="104" r="8" class="dot-ring"/>
+              <circle cx="352" cy="104" r="8" class="dot-team"/>
+              <circle cx="451" cy="104" r="8" class="dot-team"/>
+              <circle cx="550" cy="104" r="8" class="dot-team"/>
+              <circle cx="649" cy="104" r="8" class="dot-team"/>
+              <circle cx="748" cy="104" r="8" class="dot-team"/>
+              <circle cx="847" cy="104" r="8" class="dot-team"/>
+              <circle cx="946" cy="104" r="8" class="dot-team"/>
+              <text class="t-node" text-anchor="middle"><tspan x="55" y="132">DM</tspan><tspan x="55" y="148">received</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="154" y="132">AI</tspan><tspan x="154" y="148">qualifies</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="253" y="132">Contact</tspan><tspan x="253" y="148">captured</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="352" y="132">Call &amp;</tspan><tspan x="352" y="148">confirm</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="451" y="132">Appointment</tspan><tspan x="451" y="148">booked</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="550" y="132">Consultation</tspan><tspan x="550" y="148">attended</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="649" y="132">Treatment</tspan><tspan x="649" y="148">plan</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="748" y="132">Sessions</tspan><tspan x="748" y="148">in progress</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="847" y="132">Complete &amp;</tspan><tspan x="847" y="148">aftercare</tspan></text>
+              <text class="t-node" text-anchor="middle"><tspan x="946" y="132">Alumni</tspan><tspan x="946" y="148">&amp; returns</tspan></text>
+            </svg>
+          </div>
+          <figcaption>The main path. AI owns the first two steps; the handoff happens the moment a phone number is shared or the person asks for yours. Every side branch (nurture, lost, no-show, not suitable and so on) is listed on the stage cards below.</figcaption>
+        </figure>
+
+        <ol class="stages">
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip ai">AI</span></div><h3>DM received</h3><p>Instant reply in seconds. Records which post, video, story or ad started the chat, and the language used.</p><p class="exits"><b>Exits</b>spam · existing client (opens their record)</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip ai">AI</span></div><h3>AI qualifies</h3><p>Finds out what they want, when and where. Answers FAQs and price ranges from the approved list. Checks age before anything is booked.</p><p class="exits"><b>Exits</b>nurture (not ready) · not a fit · under 18</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip">System</span></div><h3>Contact captured</h3><p>Number shared, or they asked for yours. The lead is created, merged with any existing record and assigned by rota. Claude writes a call brief.</p><p class="exits"><b>Exits</b>duplicate merged</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip team">Coordinator</span></div><h3>Call &amp; confirm</h3><p>Call within the SLA, log the outcome with one tap, agree the date and when payment or deposit is due.</p><p class="exits"><b>Exits</b>no answer ×3 → WhatsApp, then nurture · lost (reason)</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip team">Front desk</span></div><h3>Appointment booked</h3><p>Deposit link, confirmation, reminders, directions and preparation notes go out automatically.</p><p class="exits"><b>Exits</b>reschedule loop · cancelled · refund</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip team">Clinician</span></div><h3>Consultation</h3><p>Attended or no-show is recorded. Assessment notes and suitability stay in restricted fields.</p><p class="exits"><b>Exits</b>no-show → rebook · not suitable · thinking it over</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip team">Clinician</span></div><h3>Treatment plan</h3><p>One plan holds several procedures, each with its own session count, price, package and payment plan, plus consent forms.</p><p class="exits"><b>Exits</b>declined (reason) · accepts part of the plan</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip team">Team</span></div><h3>Sessions in progress</h3><p>Every session is scheduled and tracked (“Session 2 of 6”), with check-ins between sessions. Procedures can be added mid-way.</p><p class="exits"><b>Exits</b>paused · clinical escalation · partial refund</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip">System</span></div><h3>Complete &amp; aftercare</h3><p>Final review, aftercare schedule, results photos in restricted storage, review and referral request.</p><p class="exits"><b>Exits</b>complaint → manager</p></li>
+          <li class="stage"><div class="top"><span class="num"></span><span class="chip ai">AI + team</span></div><h3>Alumni &amp; returns</h3><p>Check-ins at agreed intervals where the person consented. A returning DM is recognised instantly and opens a new episode on the same record.</p><p class="exits"><b>Exits</b>do-not-contact · erase on request</p></li>
+        </ol>
+
+        <div class="callout"><strong>Overrides are built in.</strong><p>Anyone with permission can move a client to any stage, reopen a lost lead, edit a plan, change an SLA for one case or pause the AI for one person. The system asks for a reason and logs who did what and when.</p></div>
+
+        <figure>
+          <div class="diagram">
+            <svg viewBox="0 0 1000 222" role="img" aria-label="Data model: one client record links Instagram, TikTok, phone and email. A client has episodes, for example 2024 completed and 2026 returning. An episode has a treatment plan with procedure A of six sessions and procedure B of one session; each session is done, booked or due.">
+              <defs>
+                <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker>
+              </defs>
+              <rect x="10" y="84" width="180" height="60" rx="10" class="box team"/>
+              <text x="100" y="110" class="t-title" text-anchor="middle">Client</text>
+              <text x="100" y="128" class="t-sub" text-anchor="middle">IG · TikTok · phone · email</text>
+              <rect x="240" y="26" width="170" height="52" rx="10" class="box"/>
+              <text x="325" y="48" class="t-title" text-anchor="middle">Episode 1 · 2024</text>
+              <text x="325" y="65" class="t-sub" text-anchor="middle">completed</text>
+              <rect x="240" y="146" width="170" height="52" rx="10" class="box"/>
+              <text x="325" y="168" class="t-title" text-anchor="middle">Episode 2 · 2026</text>
+              <text x="325" y="185" class="t-sub" text-anchor="middle">returning client</text>
+              <rect x="460" y="146" width="160" height="52" rx="10" class="box"/>
+              <text x="540" y="168" class="t-title" text-anchor="middle">Treatment plan</text>
+              <text x="540" y="185" class="t-sub" text-anchor="middle">accepted · 3 instalments</text>
+              <rect x="670" y="104" width="140" height="44" rx="10" class="box"/>
+              <text x="740" y="123" class="t-title" text-anchor="middle">Procedure A</text>
+              <text x="740" y="139" class="t-sub" text-anchor="middle">6 sessions</text>
+              <rect x="670" y="168" width="140" height="44" rx="10" class="box"/>
+              <text x="740" y="187" class="t-title" text-anchor="middle">Procedure B</text>
+              <text x="740" y="203" class="t-sub" text-anchor="middle">1 session</text>
+              <path d="M190,104 L240,56" class="edge" marker-end="url(#ah3)"/>
+              <path d="M190,124 L240,168" class="edge" marker-end="url(#ah3)"/>
+              <path d="M410,172 L460,172" class="edge" marker-end="url(#ah3)"/>
+              <path d="M620,164 L670,128" class="edge" marker-end="url(#ah3)"/>
+              <path d="M620,180 L670,190" class="edge" marker-end="url(#ah3)"/>
+              <path d="M810,126 L832,126" class="edge"/>
+              <circle cx="846" cy="126" r="8" class="dot-done"/>
+              <circle cx="870" cy="126" r="8" class="dot-done"/>
+              <circle cx="894" cy="126" r="8" class="dot-booked"/>
+              <circle cx="918" cy="126" r="8" class="dot-due"/>
+              <circle cx="942" cy="126" r="8" class="dot-due"/>
+              <circle cx="966" cy="126" r="8" class="dot-due"/>
+              <path d="M810,190 L832,190" class="edge"/>
+              <circle cx="846" cy="190" r="8" class="dot-due"/>
+              <circle cx="846" cy="34" r="6" class="dot-done"/><text x="858" y="38" class="t-sub">done</text>
+              <circle cx="846" cy="54" r="6" class="dot-booked"/><text x="858" y="58" class="t-sub">booked</text>
+              <circle cx="846" cy="74" r="6" class="dot-due"/><text x="858" y="78" class="t-sub">due</text>
+            </svg>
+          </div>
+          <figcaption>How one person's history is stored. There is one client record per person, with all their handles and numbers linked. Each visit cycle is an episode, so a client who returns in two years keeps their history. A plan can hold any number of procedures, and each procedure any number of sessions.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 03 LEARNING -->
+      <section id="learning">
+        <div class="sec-head"><span class="eyebrow">§03 · Learning from past DMs</span><h2>Turning years of converted chats into a playbook</h2></div>
+        <div class="callout warn"><strong>Why not pull history through the API?</strong><p>Meta's API returns only the 20 most recent messages of each conversation, and skips chats in the Requests folder that have been inactive for 30 days. Unofficial scrapers that read more break the platforms' terms and regularly get accounts banned. The data-export files contain the full history and are the platforms' own approved route.</p></div>
+        <ol class="steps">
+          <li><h3>Export</h3><p>Instagram: Accounts Center → Download your information → Messages, all time, JSON. TikTok: Settings → Download your data → JSON. Download links expire after 4 days.</p></li>
+          <li><h3>Upload privately</h3><p>An admin uploads the ZIP files to a private R2 bucket in your Cloudflare account. Only the analysis job reads them.</p></li>
+          <li><h3>Clean and mask</h3><p>Conversations are parsed and names, numbers, emails and handles are replaced with tokens before Claude sees them. The key stays in your database.</p></li>
+          <li><h3>Mark outcomes</h3><p>Each chat is matched to your booking or payment records: became a client, shared a number but didn't book, or went cold. This is what lets us learn what converts.</p></li>
+          <li><h3>Analyse every chat</h3><p>Claude reads each conversation through the Batch API (half price) and records reply speed, opener, questions asked, objections, how price came up, when the number was requested and where people dropped off.</p></li>
+          <li><h3>Compare winners and losers</h3><p>Claude compares converted and lost chats across thousands of examples and writes Playbook v1: openers, qualifying questions, objection answers, when to ask for the number, and phrases to avoid.</p></li>
+          <li><h3>Approve</h3><p>Your team edits and approves the playbook in the app. A clinician signs off anything clinical. Only then does it go live.</p></li>
+          <li><h3>Keep learning</h3><p>Every week Claude reviews new chats and outcomes and proposes changes with evidence. Wording can be A/B tested. Nothing changes without approval.</p></li>
+        </ol>
+      </section>
+
+      <!-- 04 REPLIES -->
+      <section id="replies">
+        <div class="sec-head"><span class="eyebrow">§04 · AI reply rules</span><h2>What the AI does, and where it stops</h2></div>
+        <div class="dodont">
+          <div class="card"><div class="head"><h3>The AI will</h3><span class="chip ok">in scope</span></div>
+            <ul>
+              <li>Reply within seconds, any time of day, in the person's language.</li>
+              <li>Say early on that they're chatting with an AI assistant and can ask for a person at any time.</li>
+              <li>Answer logistics: location, opening hours, process, prices and ranges from the approved list.</li>
+              <li>Ask the qualifying questions from the playbook and steer toward a phone call.</li>
+              <li>Spot a phone number or a request for yours, create the lead and alert the team.</li>
+              <li>Hand over to a human when unsure, upset, clinical or asked to; the chat is then paused for AI.</li>
+            </ul>
+          </div>
+          <div class="card"><div class="head"><h3>The AI will not</h3><span class="chip risk">blocked</span></div>
+            <ul>
+              <li>Give medical advice, judge suitability or discuss risks for a specific person. Those go to a qualified person.</li>
+              <li>Promise results, invent prices or offers, or name prescription-only medicines where the law forbids it.</li>
+              <li>Book anyone under 18 or continue with someone who says they are a minor.</li>
+              <li>Message anyone outside the platform's reply window or send cold outreach.</li>
+              <li>Pretend to be a named human member of staff.</li>
+              <li>Ask for card details in DMs. Payment links come from the payment provider after the call.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="card"><span class="chip">Instagram window</span><p class="small">Free-form replies within 24 hours of the person's last message. A human (not the AI) can send support replies for up to 7 days with Meta's Human Agent tag.</p></div>
+          <div class="card"><span class="chip">TikTok window</span><p class="small">Replies within 48 hours of the person's last message, and at most 10 messages per message they send.</p></div>
+          <div class="card"><span class="chip">Window closed</span><p class="small">The AI stays silent. If the person had shared a number, a call task goes to a coordinator instead.</p></div>
+        </div>
+        <h3>Rolling out autonomy safely</h3>
+        <div class="dial">
+          <div><span class="lvl">Stage 1 · Shadow</span><p>Claude drafts a reply for every DM, but staff reply as usual. We compare the drafts with what staff actually sent.</p><p class="gate">Move on when reviewers rate most drafts as good as or better than the human reply.</p></div>
+          <div><span class="lvl">Stage 2 · Co-pilot</span><p>Claude's draft appears in the app; staff tap Send, or edit first. Every edit teaches the playbook.</p><p class="gate">Move on after two weeks with most drafts sent unedited.</p></div>
+          <div class="on"><span class="lvl">Stage 3 · Autopilot</span><p>Claude sends on its own. Low-confidence, sensitive or clinical chats still go to a person. A kill switch pauses all AI replies at once.</p><p class="gate">Target state. Nightly Claude audits sample 50 chats.</p></div>
+        </div>
+      </section>
+
+      <!-- 05 FEATURES -->
+      <section id="features">
+        <div class="sec-head"><span class="eyebrow">§05 · Feature map</span><h2>Everything the system covers</h2></div>
+        <p class="legend"><span><span class="chip ok">MVP</span> first release</span><span><span class="chip team">Phase 4</span> clinic operations</span><span><span class="chip">Phase 5</span> growth and polish</span></p>
+        <div class="grid-3">
+          <div class="card"><div class="head"><h3>Unified inbox</h3><span class="chip ok">MVP</span></div><ul><li>Instagram and TikTok DMs in one list</li><li>Story replies and comment-to-DM</li><li>Voice notes transcribed, auto-translation</li><li>Take-over switch, internal notes, saved replies</li></ul></div>
+          <div class="card"><div class="head"><h3>AI reply engine</h3><span class="chip ok">MVP</span></div><ul><li>Instant replies from the approved playbook</li><li>Intent, lead score and confidence per chat</li><li>Reply-window aware sending</li><li>Playbook versions and A/B wording tests</li></ul></div>
+          <div class="card"><div class="head"><h3>Leads and clients</h3><span class="chip ok">MVP</span></div><ul><li>One record per person across all channels</li><li>Duplicate detection and merge</li><li>Source post, video or ad on every lead</li><li>Tags, custom fields, consent flags</li></ul></div>
+          <div class="card"><div class="head"><h3>Pipeline and rules</h3><span class="chip ok">MVP</span></div><ul><li>Editable stages per branch or service</li><li>SLA clocks and escalation ladders</li><li>If-this-then-that automations</li><li>Rota-based assignment, overrides with reasons</li></ul></div>
+          <div class="card"><div class="head"><h3>Calls and tasks</h3><span class="chip ok">MVP</span></div><ul><li>Tap-to-call from the app with an AI call brief</li><li>One-tap outcomes, callback scheduling</li><li>Retry cadence for unanswered calls</li><li>Optional recording and transcript, with consent</li></ul></div>
+          <div class="card"><div class="head"><h3>Notifications</h3><span class="chip ok">MVP</span></div><ul><li>Push, WhatsApp, SMS and email</li><li>Rules per role and per person</li><li>Quiet hours and on-call rota</li><li>Claude-written daily digest</li></ul></div>
+          <div class="card"><div class="head"><h3>Team and access</h3><span class="chip ok">MVP</span></div><ul><li>Personal logins with 2-factor or passkeys</li><li>Role templates plus per-person permissions</li><li>Branches and locations</li><li>Full audit log and session control</li></ul></div>
+          <div class="card"><div class="head"><h3>Claude connections</h3><span class="chip ok">MVP</span></div><ul><li>MCP server with OAuth</li><li>REST API and webhooks</li><li>CSV import and export</li><li>n8n or Zapier bridge for anything else</li></ul></div>
+          <div class="card"><div class="head"><h3>Compliance</h3><span class="chip ok">MVP</span></div><ul><li>Consent log and do-not-contact</li><li>Data retention timers</li><li>Export or erase a person on request</li><li>Personal data masked before AI analysis</li></ul></div>
+          <div class="card"><div class="head"><h3>Appointments</h3><span class="chip team">Phase 4</span></div><ul><li>Locations, practitioners, rooms</li><li>Availability and online slots for staff</li><li>Reminders, no-show and rebooking flow, waitlist</li><li>Google or Outlook calendar sync</li></ul></div>
+          <div class="card"><div class="head"><h3>Treatment plans</h3><span class="chip team">Phase 4</span></div><ul><li>Several procedures per plan, sessions per procedure</li><li>Packages and bundles</li><li>Consent forms and aftercare protocols</li><li>Before and after photos in restricted storage</li></ul></div>
+          <div class="card"><div class="head"><h3>Payments</h3><span class="chip team">Phase 4</span></div><ul><li>Quotes, deposits and payment links</li><li>Instalments and balances</li><li>Invoices and refunds</li><li>Local payment providers</li></ul></div>
+          <div class="card"><div class="head"><h3>Analytics</h3><span class="chip">Phase 5</span></div><ul><li>Funnel by channel, post and staff member</li><li>Reply and call speed</li><li>AI versus human conversion</li><li>Revenue per source, returning-client cohorts</li></ul></div>
+          <div class="card"><div class="head"><h3>Retention</h3><span class="chip">Phase 5</span></div><ul><li>Aftercare check-ins</li><li>Review and referral requests</li><li>Win-back messages, only with consent</li><li>Anniversary reminders</li></ul></div>
+          <div class="card"><div class="head"><h3>Multi-organisation</h3><span class="chip ok">MVP base</span></div><ul><li>Separate workspace per organisation</li><li>Own channels, playbook, users, data</li><li>Per-organisation branding</li><li>Central admin for you</li></ul></div>
+        </div>
+      </section>
+
+      <!-- 06 ACCESS -->
+      <section id="access">
+        <div class="sec-head"><span class="eyebrow">§06 · Logins and access</span><h2>Separate logins, choosable access</h2></div>
+        <p class="prose muted">Roles are starting templates. An admin can tick or untick any permission for any person, per branch. “Limited” means assigned clients only, or masked details.</p>
+        <div class="table-wrap">
+          <table class="t-roles">
+            <thead><tr><th>Role</th><th>See chats</th><th>Reply in chats</th><th>See phone numbers</th><th>Book / move</th><th>Clinical notes &amp; photos</th><th>Payments</th><th>Edit AI playbook</th><th>Analytics</th><th>Manage users</th></tr></thead>
+            <tbody>
+              <tr><th>Owner</th><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="full">Approve</td><td class="full">Full</td><td class="full">Full</td></tr>
+              <tr><th>Manager</th><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="full">Full</td><td class="part">Summary</td><td class="part">View</td><td class="full">Approve</td><td class="full">Full</td><td class="part">Own team</td></tr>
+              <tr><th>Lead coordinator</th><td class="part">Assigned</td><td class="part">Assigned</td><td class="part">Assigned</td><td class="full">Full</td><td class="none">—</td><td class="part">Send links</td><td class="none">—</td><td class="part">Own stats</td><td class="none">—</td></tr>
+              <tr><th>Front desk</th><td class="part">Today's</td><td class="part">Logistics</td><td class="full">Full</td><td class="full">Full</td><td class="none">—</td><td class="part">Take payment</td><td class="none">—</td><td class="none">—</td><td class="none">—</td></tr>
+              <tr><th>Clinician</th><td class="part">Own clients</td><td class="none">—</td><td class="part">Own clients</td><td class="part">Own diary</td><td class="full">Full</td><td class="none">—</td><td class="part">Clinical facts</td><td class="none">—</td><td class="none">—</td></tr>
+              <tr><th>Finance</th><td class="none">—</td><td class="none">—</td><td class="part">Billing</td><td class="none">—</td><td class="none">—</td><td class="full">Full</td><td class="none">—</td><td class="part">Revenue</td><td class="none">—</td></tr>
+              <tr><th>Marketing</th><td class="part">Masked</td><td class="none">—</td><td class="none">—</td><td class="none">—</td><td class="none">—</td><td class="none">—</td><td class="part">Propose</td><td class="full">Full</td><td class="none">—</td></tr>
+              <tr><th>Auditor</th><td class="part">Read only</td><td class="none">—</td><td class="part">Masked</td><td class="none">—</td><td class="none">—</td><td class="part">Read only</td><td class="none">—</td><td class="part">Read only</td><td class="none">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="grid-2">
+          <div class="card"><h3>On the go</h3><p class="small">The web app installs to the home screen on Android and iPhone (iOS 16.4+ supports push for installed web apps). Native iOS and Android builds follow, distributed privately to your staff through Apple Business Manager and Managed Google Play, so they never appear in the public stores.</p></div>
+          <div class="card"><h3>Security basics</h3><p class="small">Encrypted in transit and at rest, 2-factor or passkeys for every login, automatic logout on lost devices, an audit log of every view of clinical data, and daily backups you can export.</p></div>
+        </div>
+      </section>
+
+      <!-- 07 ALERTS -->
+      <section id="alerts">
+        <div class="sec-head"><span class="eyebrow">§07 · Notifications</span><h2>Alerts that make sure nobody is left waiting</h2></div>
+        <div class="grid-2" style="align-items:start">
+          <div class="notif" aria-label="Example push notification">
+            <div class="app"><span>LEAD MANAGER</span><span>now</span></div>
+            <b>New lead · Instagram · shared a phone number</b>
+            <p class="brief">Asked about two procedures and downtime. Wants a weekend slot next month. Price came up once; answered with the approved range. Prefers WhatsApp after 6 pm.</p>
+            <p class="clock">Call within 15:00 · assigned to you</p>
+          </div>
+          <p class="prose muted">This is the alert a coordinator sees seconds after a number appears in a DM. Tapping it opens the full chat, the AI's call brief and a call button. Times below are defaults, editable per organisation.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="t-alerts">
+            <thead><tr><th>When this happens</th><th>Who hears</th><th>How</th><th>If nothing happens</th></tr></thead>
+            <tbody>
+              <tr><td>Number shared, or they asked for yours</td><td>Coordinator on rota</td><td>Push + WhatsApp ping</td><td>15 min → manager · 60 min → owner</td></tr>
+              <tr><td>AI unsure, clinical question, complaint, possible minor</td><td>On-duty coordinator</td><td>Push, chat paused for AI</td><td>10 min → manager</td></tr>
+              <tr><td>Call not answered</td><td>Same coordinator</td><td>Task with retry plan</td><td>3 tries → WhatsApp template → nurture</td></tr>
+              <tr><td>Appointment tomorrow</td><td>Client and practitioner</td><td>WhatsApp or SMS to client, push to staff</td><td>Not confirmed by 6 pm → call task</td></tr>
+              <tr><td>Deposit unpaid 24 h before</td><td>Coordinator, finance</td><td>Push</td><td>Manager decides: hold or release slot</td></tr>
+              <tr><td>No-show</td><td>Coordinator</td><td>Push + rebooking task</td><td>Moves to nurture after 7 days</td></tr>
+              <tr><td>Next session due, aftercare check-in</td><td>Client, coordinator</td><td>WhatsApp template</td><td>Call task</td></tr>
+              <tr><td>Every morning at 08:00</td><td>Owner, managers</td><td>Claude-written brief by email or push</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 08 CLAUDE -->
+      <section id="claude">
+        <div class="sec-head"><span class="eyebrow">§08 · Claude as the brain</span><h2>Three ways Claude connects</h2></div>
+        <div class="grid-3">
+          <div class="card"><span class="chip ai">Real time</span><h3>Reply engine</h3><p class="small">The Claude API, with tools to look up the lead, prices, availability and the playbook, and to flag a handoff. Prompt caching keeps the playbook cheap to reuse on every message.</p></div>
+          <div class="card"><span class="chip ai">On demand</span><h3>Your own MCP server</h3><p class="small">Connect it in Claude as a custom connector and ask: “Which leads shared a number today and haven't been called?”, “Move her session 3 to Thursday and tell her”, “Why did TikTok conversion drop this week?” Claude acts with the asking person's permissions, and asks before messaging any client.</p></div>
+          <div class="card"><span class="chip ai">On schedule</span><h3>Claude jobs</h3><p class="small">Daily briefing, a nightly quality check of AI chats, weekly playbook proposals, a monthly performance report, and an alert if response times or conversion drift.</p></div>
+        </div>
+        <div class="card">
+          <h3>Existing Claude connectors that slot in alongside</h3>
+          <ul>
+            <li><b>Cloudflare Developer Platform</b> (official connector): Claude can watch the Workers, database and logs that run the system.</li>
+            <li><b>Gmail</b> (already connected on your account), <b>Google Calendar</b> and <b>Calendly</b>: email follow-ups and diary sync if the organisation already uses them.</li>
+            <li><b>Stripe</b> and <b>Twilio</b>: payment links, SMS and calling, if those providers suit your country.</li>
+            <li><b>respond.io</b>: official TikTok and Instagram messaging partner with its own hosted MCP server for Claude. Held in reserve as the TikTok bridge if direct API access is refused (see §10).</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 09 EXISTING -->
+      <section id="existing">
+        <div class="sec-head"><span class="eyebrow">§09 · Existing tools</span><h2>Could existing Claude connectors be the system instead?</h2></div>
+        <p class="prose">Partly. Several tools cover the inbox or the sales pipeline and connect to Claude, but none models a client who books several procedures, attends sessions over months and comes back years later. A stack of them would split one journey across three subscriptions, and Claude would only see it through each tool's limited connector.</p>
+        <div class="table-wrap">
+          <table class="t-tools">
+            <thead><tr><th>Option</th><th>Instagram DMs</th><th>TikTok DMs</th><th>Claude connection</th><th>Procedures &amp; sessions</th><th>Your data</th><th>Cost model</th></tr></thead>
+            <tbody>
+              <tr class="rec"><th>Custom build (recommended)</th><td>Official API, own Meta app</td><td>Official API where available, partner fallback</td><td>Native: API + own MCP server</td><td>Built for it, return episodes included</td><td>Fully yours</td><td>Cloudflare $0–5/mo + Claude usage</td></tr>
+              <tr><th>respond.io</th><td>Yes</td><td>Yes (open beta; not EEA/UK/CH)</td><td>Official hosted MCP server</td><td>No, generic lifecycle stages</td><td>Vendor-hosted</td><td>Per-seat subscription</td></tr>
+              <tr><th>GoHighLevel</th><td>Yes</td><td>Not confirmed for DMs</td><td>Official MCP server (about 36 tools)</td><td>Partial: pipelines and calendars</td><td>Vendor-hosted</td><td>Monthly subscription</td></tr>
+              <tr><th>HubSpot</th><td>Not a DM-first tool</td><td>No</td><td>Official Claude connector and plugin</td><td>Partial, custom objects on higher tiers</td><td>Vendor-hosted</td><td>Per-seat, higher tiers needed</td></tr>
+              <tr><th>ManyChat</th><td>Yes (Meta partner)</td><td>Yes</td><td>No first-party MCP; third-party bridges only</td><td>No, not a CRM</td><td>Vendor-hosted</td><td>By contact count</td></tr>
+              <tr><th>Kommo</th><td>Yes</td><td>Unclear for DMs</td><td>No official Claude connector found</td><td>Partial: pipelines</td><td>Vendor-hosted</td><td>Per-seat subscription</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><strong>Verdict</strong><p>Build the core yourself on Cloudflare and talk to Instagram and TikTok directly through their official APIs. Use connectors where they add something: Cloudflare for monitoring, Gmail and calendars for the team, Stripe or a local provider for payments, and respond.io only as a TikTok bridge if needed. The fastest stopgap, if you need DMs answered before the build is ready, is respond.io + HubSpot connected to Claude, accepting that the treatment journey would live in spreadsheets until the core ships.</p></div>
+      </section>
+
+      <!-- 10 RISKS -->
+      <section id="risks">
+        <div class="sec-head"><span class="eyebrow">§10 · Risks and conflicts</span><h2>Where this could clash with platforms, regulators or people</h2></div>
+        <p class="prose muted">Researched October 2026. Platform rules change often; each one is re-checked during app review and before launch.</p>
+        <div class="table-wrap">
+          <table class="t-risk">
+            <thead><tr><th>Stakeholder</th><th>Possible conflict</th><th>What the rules say</th><th>Risk</th><th>How the plan handles it</th></tr></thead>
+            <tbody>
+              <tr><th>Meta (Instagram)</th><td>Automated DM replies</td><td>Allowed through the official Instagram Messaging API by an app with App Review and Business Verification. Replies within 24 h of the user's last message; the Human Agent tag (7 days) is for human-sent support only. There must be a way to reach a human, and automation must be disclosed where the law requires.</td><td><span class="chip ok">Low</span></td><td>Our own Meta app goes through App Review. Window-aware sending, a human take-over button and an AI disclosure line.</td></tr>
+              <tr><th>Meta (Instagram)</th><td>Pulling old chats</td><td>The API returns only the last 20 messages per chat. Scrapers and private-API libraries break Meta's terms; Meta detects them and bans accounts.</td><td><span class="chip risk">High if done wrong</span></td><td>History comes only from the official “Download your information” export. No passwords shared, no unofficial tools.</td></tr>
+              <tr><th>TikTok</th><td>API availability</td><td>Business Messaging API is in open beta and needs an approved application and a business account linked to TikTok for Business. It is not available to accounts registered in the EEA, UK or Switzerland. Replies within 48 h, at most 10 per user message.</td><td><span class="chip warn">Medium</span></td><td>Apply directly in week 1. Fallback: official partner (respond.io or SleekFlow) feeding our system. If the region is blocked: AI drafts in the app, a person sends in TikTok, and leads are invited to Instagram or WhatsApp.</td></tr>
+              <tr><th>Meta (WhatsApp)</th><td>Using WhatsApp for reminders</td><td>Since 15 Jan 2026 general-purpose AI assistants are banned from the WhatsApp Business Platform. Business-specific bots for bookings, FAQs and support remain allowed. Messages outside the 24 h window need approved templates.</td><td><span class="chip ok">Low</span></td><td>WhatsApp used only for appointment and aftercare messages, with templates and opt-in.</td></tr>
+              <tr><th>Clients (privacy law)</th><td>Health details, old chats and AI processing</td><td>Health information is special-category data under GDPR and UK GDPR, and PHI under HIPAA in the US. Old DMs contain other people's data, so analysis needs a lawful basis, processor contracts and minimisation.</td><td><span class="chip warn">Medium–high</span></td><td>Mask personal data before analysis, Anthropic data processing terms (BAA if HIPAA applies), retention limits, consent records, export and erase tools, updated privacy notice.</td></tr>
+              <tr><th>Cloudflare</th><td>Hosting health data on the free tier</td><td>Cloudflare signs HIPAA business associate agreements only with Enterprise customers.</td><td><span class="chip warn">Depends on country</span></td><td>Outside the US this is usually fine with a DPA. If HIPAA applies: keep clinical data with a BAA-covered host, or move to Cloudflare Enterprise.</td></tr>
+              <tr><th>Anthropic</th><td>Usage policy for health topics</td><td>Healthcare is a high-risk use: consumer-facing outputs that advise need human review by a qualified professional and disclosure that AI was used.</td><td><span class="chip ok">Low by design</span></td><td>The AI stays on logistics, pricing and booking. Clinical questions go to a qualified person. AI disclosure on every chat.</td></tr>
+              <tr><th>Regulators (AI transparency)</th><td>Not telling people it's AI</td><td>EU AI Act Article 50 has applied since 2 Aug 2026: chatbots must tell people they are talking to AI, including non-EU businesses with EU users. Several US states have similar bot laws.</td><td><span class="chip ok">Low</span></td><td>Disclosure at the start of a chat and when the AI takes back over from a person.</td></tr>
+              <tr><th>Advertising and medical regulators</th><td>What DM replies claim</td><td>DM replies count as marketing. Examples: the UK bans promoting prescription-only medicines (such as naming Botox) to the public; claims must be substantiated and testimonials genuine.</td><td><span class="chip warn">Medium</span></td><td>Approved claims list, banned-phrase filter, clinician sign-off on the knowledge base, audit log of every AI message.</td></tr>
+              <tr><th>Minors</th><td>Young TikTok audience</td><td>Many countries restrict cosmetic procedures for under-18s; England, for example, bans botulinum toxin and fillers for under-18s.</td><td><span class="chip warn">Medium</span></td><td>Age check before booking, a polite under-18 flow, and an alert to a person.</td></tr>
+              <tr><th>Clients (consent)</th><td>Calls, SMS, follow-ups, call recording</td><td>Marketing messages and calls need consent in many countries (for example PECR in the UK, TCPA in the US). Call recording needs notice.</td><td><span class="chip warn">Medium</span></td><td>Consent flag per channel, do-not-contact state, recording off by default.</td></tr>
+              <tr><th>Apple and Google</th><td>Publishing the staff app</td><td>Apple rejects public apps that only wrap a website (guideline 4.2).</td><td><span class="chip ok">Low</span></td><td>Installable web app first, then native apps with real push, distributed privately to staff.</td></tr>
+              <tr><th>Staff</th><td>Monitoring and data access</td><td>Employee privacy rules apply to performance tracking.</td><td><span class="chip ok">Low</span></td><td>Clear role-based access, transparent metrics, audit log.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 11 ROADMAP -->
+      <section id="roadmap">
+        <div class="sec-head"><span class="eyebrow">§11 · Roadmap</span><h2>Eighteen weeks from approval to full system</h2></div>
+        <p class="prose muted">Estimates. App Review timing is set by Meta and TikTok, so those bars are dashed.</p>
+        <div class="gantt" role="img" aria-label="Roadmap: approvals and exports weeks 1 to 3; history analysis weeks 2 to 5; core system and web app weeks 3 to 9; Instagram co-pilot weeks 7 to 9 then autopilot from week 10; TikTok weeks 8 to 11 when access is granted; appointments, treatment plans, sessions and payments weeks 9 to 14; native apps, analytics and retention weeks 13 to 18.">
+          <div class="gantt-grid">
+            <span></span>
+            <span class="wk">1</span><span class="wk">2</span><span class="wk">3</span><span class="wk">4</span><span class="wk">5</span><span class="wk">6</span><span class="wk">7</span><span class="wk">8</span><span class="wk">9</span><span class="wk">10</span><span class="wk">11</span><span class="wk">12</span><span class="wk">13</span><span class="wk">14</span><span class="wk">15</span><span class="wk">16</span><span class="wk">17</span><span class="wk">18</span>
+
+            <span class="lbl">Approvals and exports<small>Meta verification and App Review, TikTok API, Anthropic terms, data exports</small></span>
+            <span class="bar ext" style="grid-column: 2 / span 3"></span>
+
+            <span class="lbl" style="grid-column:1">History analysis<small>Playbook v1 for your approval</small></span>
+            <span class="bar ai" style="grid-column: 3 / span 4"></span>
+
+            <span class="lbl" style="grid-column:1">Core system and web app<small>Inbox, leads, pipeline, logins, alerts, MCP server</small></span>
+            <span class="bar" style="grid-column: 4 / span 7"></span>
+
+            <span class="lbl" style="grid-column:1">Instagram live<small>Shadow and co-pilot, then autopilot</small></span>
+            <span class="bar ai" style="grid-column: 8 / span 4"></span>
+
+            <span class="lbl" style="grid-column:1">TikTok live<small>When access is granted</small></span>
+            <span class="bar ext" style="grid-column: 9 / span 4"></span>
+
+            <span class="lbl" style="grid-column:1">Clinic operations<small>Appointments, plans, sessions, payments, reminders</small></span>
+            <span class="bar" style="grid-column: 10 / span 6"></span>
+
+            <span class="lbl" style="grid-column:1">Native apps and growth<small>Private iOS/Android, analytics, retention, learning loop</small></span>
+            <span class="bar" style="grid-column: 14 / span 6"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 COSTS -->
+      <section id="costs">
+        <div class="sec-head"><span class="eyebrow">§12 · Running costs</span><h2>What it costs to run</h2></div>
+        <div class="table-wrap">
+          <table class="t-cost">
+            <thead><tr><th>Item</th><th>Estimate</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Cloudflare (Workers, D1, R2, Queues, Access)</td><td class="num">$0 → $5 / month</td><td>Free tier covers a pilot. The $5 Workers plan gives headroom for queues and traffic spikes.</td></tr>
+              <tr><td>Claude API, AI replies</td><td class="num">≈ $0.02–0.03 / reply</td><td>Claude Opus 5.5 with the playbook cached: about $240 per 10,000 replies. Claude Sonnet 5.5 would roughly halve that if you prefer; your call.</td></tr>
+              <tr><td>Claude API, history analysis (one-off)</td><td class="num">≈ $150–400</td><td>Batch API at half price; depends on how many conversations the exports contain.</td></tr>
+              <tr><td>Instagram and TikTok messaging APIs</td><td class="num">$0</td><td>No per-message fee for replies inside the window.</td></tr>
+              <tr><td>WhatsApp and SMS reminders</td><td class="num">per message</td><td>Set by Meta or the SMS provider per country.</td></tr>
+              <tr><td>Apple Developer / Google Play</td><td class="num">$99 / yr · $25 once</td><td>Needed for the native apps in phase 5.</td></tr>
+              <tr><td>If HIPAA applies</td><td class="num">quote</td><td>Cloudflare Enterprise or another BAA-covered host for clinical data, plus a BAA with Anthropic.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 13 QUESTIONS -->
+      <section id="questions">
+        <div class="sec-head"><span class="eyebrow">§13 · Before we start</span><h2>Questions for you</h2></div>
+        <ol class="questions">
+          <li><b>Which country is the organisation registered in, and where are most clients?</b><span>TikTok's DM API isn't available to accounts registered in the EEA, UK or Switzerland, and the country decides which privacy and health-data laws apply.</span></li>
+          <li><b>What kind of procedures does it offer?</b><span>Medical, cosmetic, dental, hair or other. This sets what the AI may say, age limits, advertising rules and whether HIPAA-style rules apply.</span></li>
+          <li><b>Do you have records of which past DM leads became paying clients?</b><span>A booking sheet, clinic software or call log is enough. Without outcomes we can only learn what was said, not what converted.</span></li>
+          <li><b>Roughly how many DMs arrive per day, and how many staff will log in, in which roles?</b><span>Sizes costs, the alert rota and the permission templates.</span></li>
+          <li><b>Which tools are in use today?</b><span>Calendar, clinic or patient software, payment provider, WhatsApp Business. We integrate with what works and replace what doesn't.</span></li>
+          <li><b>How should payment work?</b><span>Deposit at booking, full payment, instalments; which provider is available in your country.</span></li>
+          <li><b>Which languages do the DMs come in?</b><span>Claude handles most languages; the playbook needs examples for each.</span></li>
+          <li><b>Are both accounts business accounts, and who has admin access to the Meta Business portfolio and TikTok Business Center?</b><span>Needed for Business Verification and the API applications in week 1.</span></li>
+          <li><b>Are you comfortable starting in co-pilot mode for two to four weeks?</b><span>Recommended. Staff approve AI drafts before the AI replies on its own.</span></li>
+        </ol>
+      </section>
+
+      <!-- 14 SOURCES -->
+      <section id="sources">
+        <div class="sec-head"><span class="eyebrow">§14 · Sources</span><h2>Where the research came from</h2></div>
+        <ul class="sources">
+          <li><a href="https://developers.facebook.com/documentation/business-messaging/messenger-platform/policy">Meta: Messenger Platform and Instagram Messaging API policy</a></li>
+          <li><a href="https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api/">Meta: Instagram Messaging API, sending messages</a></li>
+          <li><a href="https://developers.facebook.com/docs/messenger-platform/conversations/">Meta: Conversations API (20 most recent messages)</a></li>
+          <li><a href="https://developers.chatwoot.com/self-hosted/instagram-app-review">Chatwoot: Instagram App Review walkthrough</a></li>
+          <li><a href="https://www.keyapi.ai/blog/instagram-messaging-api-policy/">Instagram 24-hour window and Human Agent tag guide (2026)</a></li>
+          <li><a href="https://business-api.tiktok.com/portal/docs/business-messaging-api/v1.3">TikTok: Business Messaging API</a></li>
+          <li><a href="https://respond.io/help/tiktok/tiktok-overview">respond.io: TikTok overview and regional limits</a></li>
+          <li><a href="https://respond.canny.io/changelog/us-accounts-can-now-connect-tiktok-business-messaging">respond.io: US accounts can now connect TikTok Business Messaging</a></li>
+          <li><a href="https://help.sleekflow.io/en_US/tiktok-business-messaging/tiktok-business-messaging-channel-overview">SleekFlow: TikTok 48-hour window and 10-message limit</a></li>
+          <li><a href="https://respond.io/help/integrations/model-context-protocol-mcp">respond.io: MCP server for Claude</a></li>
+          <li><a href="https://respond.io/blog/whatsapp-general-purpose-chatbots-ban">respond.io: WhatsApp 2026 AI policy explained</a></li>
+          <li><a href="https://help.gohighlevel.com/support/solutions/articles/155000008360-highlevel-mcp-multi-account-support-for-claude">HighLevel: MCP support for Claude</a></li>
+          <li><a href="https://www.mosaicchats.com/blog/how-to-export-instagram-messages">How to export Instagram DMs as JSON (2026)</a></li>
+          <li><a href="https://scroll-back.com/guides/how-to-download-your-tiktok-data">How to download your TikTok data as JSON</a></li>
+          <li><a href="https://scrapfly.io/blog/posts/best-open-source-instagram-scrapers">Ban risk of private-API Instagram libraries</a></li>
+          <li><a href="https://www.anthropic.com/aup">Anthropic Usage Policy (high-risk use cases)</a></li>
+          <li><a href="https://www.strac.io/blog/is-claude-hipaa-compliant">Claude and HIPAA: BAA coverage (2026)</a></li>
+          <li><a href="https://www.bakerbotts.com/thought-leadership/publications/2026/september/eu-ai-act-article-50-transparency-obligations-go-live">Baker Botts: EU AI Act Article 50 goes live</a></li>
+          <li><a href="https://www.cloudflare.com/trust-hub/compliance-resources/hipaa/">Cloudflare: HIPAA FAQs</a></li>
+          <li><a href="https://developers.cloudflare.com/agents/model-context-protocol/guides/remote-mcp-server/">Cloudflare: Build a remote MCP server</a></li>
+          <li><a href="https://developers.cloudflare.com/changelog/2025-04-07-durable-objects-free-tier/">Cloudflare: Durable Objects on the free plan</a></li>
+          <li><a href="https://agentdeals.dev/vendor/cloudflare-workers">Cloudflare Workers free tier limits (2026)</a></li>
+          <li><a href="https://www.mobiloud.com/blog/progressive-web-apps-ios/">Progressive web apps and push on iOS (2026)</a></li>
+          <li><a href="https://theclinickit.co.uk/asa-advertising-rules-aesthetics-practitioners/">ASA advertising rules for UK aesthetics practitioners</a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>Prepared by Claude for your approval. Nothing has been built, connected or published to any platform. Once you answer §13 and approve, the build starts with week 1 of §11.</footer>
+</div>
+
+</body></html>
