@@ -315,7 +315,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       go: (page, id) => {
         const h = '#' + page + (id ? '~' + id : '')
-        if (location.hash !== h) history.pushState(null, '', h)
+        try {
+          if (location.hash !== h) history.pushState(null, '', h)
+        } catch {
+          /* sandboxed previews may block history; in-app routing still works */
+        }
         setRoute({ page, id })
         window.scrollTo({ top: 0 })
       },
