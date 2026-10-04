@@ -9,7 +9,8 @@ treatment plans, sessions, aftercare and return visits.
 Planning. The plan below is awaiting approval; nothing has been built or connected yet.
 
 - Plan: [`docs/blueprint.html`](docs/blueprint.html) (open in a browser)
-- Open questions to answer before the build starts: section 13 of the plan
+- Build checklist: [`docs/TODO.md`](docs/TODO.md) (279 tasks in dependency order; machine-readable copy in `docs/todo-plan.json`)
+- Open questions to answer before the build starts: section 13 of the plan and "Decisions needed" in the checklist
 
 ## Planned stack
 
