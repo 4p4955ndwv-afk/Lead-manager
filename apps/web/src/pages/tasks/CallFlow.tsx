@@ -36,7 +36,12 @@ export function CallFlow({ task, client, episode, conversation, phoneShown, onRe
   const callNote = () => (startedAt ? `Call lasted ${mmss((endedAt ?? Date.now()) - startedAt)}.` : '')
   const missed = task.attempts.filter(a => a.outcome === 'no_answer').length
   const pastBooking = !!episode && !episode.exit && STAGES.indexOf(episode.stage) >= STAGES.indexOf('booked')
-  const canBook = can('appointments.manage') && !pastBooking
+  // under 18 by exit, or flagged in the chat and not yet age-verified (a later stage move can clear the exit)
+  const minor = episode?.exit === 'under18' || (!client.ageVerified && !!conversation?.messages.some(m => m.author === 'client' && m.flags?.includes('minor')))
+  const canBook = can('appointments.manage') && !pastBooking && !minor
+  // an opted-out client gets no outcome that schedules more contact; the task is closed instead
+  const optedOut = client.doNotContact
+  const outcomesOn = canAct && !optedOut
 
   const startCall = () => {
     if (!phoneShown) onReveal('call')
@@ -47,7 +52,7 @@ export function CallFlow({ task, client, episode, conversation, phoneShown, onRe
   }
 
   const outcomes: Array<{ id: CallOutcome; label: string; sub: string; icon: IconName; tone: string; disabled?: boolean; title?: string }> = [
-    { id: 'booked', label: 'Booked', sub: pastBooking ? 'Already past booking' : !can('appointments.manage') ? 'Needs booking access' : 'Pick a slot and deposit', icon: 'calendar', tone: 'ok', disabled: !canBook, title: pastBooking ? 'This client is already past the booking stage. Use Mark done or book from the calendar.' : undefined },
+    { id: 'booked', label: 'Booked', sub: minor ? 'Under 18: booking blocked' : pastBooking ? 'Already past booking' : !can('appointments.manage') ? 'Needs booking access' : 'Pick a slot and deposit', icon: 'calendar', tone: 'ok', disabled: !canBook, title: minor ? 'This person said they are under 18. Booking stays blocked until age is verified in person.' : pastBooking ? 'This client is already past the booking stage. Use Mark done or book from the calendar.' : undefined },
     { id: 'no_answer', label: 'No answer', sub: missed === 0 ? 'Retry in 2 h' : missed === 1 ? 'Retry tomorrow' : 'WhatsApp, then Nurture', icon: 'phone', tone: 'warn' },
     { id: 'call_back', label: 'Call back', sub: 'Pick a time', icon: 'history', tone: 'info' },
     { id: 'thinking', label: 'Thinking about it', sub: 'Follow up in 2 days', icon: 'clock', tone: 'team' },
@@ -91,11 +96,12 @@ export function CallFlow({ task, client, episode, conversation, phoneShown, onRe
 
       <div className="tk-outcomes-head">
         <h3 className="tk-h3">What happened?</h3>
-        {!canAct && blockedReason && <span className="tiny muted">{blockedReason}</span>}
+        {!canAct && blockedReason ? <span className="tiny muted">{blockedReason}</span>
+          : optedOut && canAct ? <span className="tiny muted">Outcomes are off because {firstName(client.name)} opted out. Close the task below.</span> : null}
       </div>
       <div className="tk-outcomes" role="group" aria-label="Call outcome">
         {outcomes.map(o => (
-          <button key={o.id} type="button" className={`tk-outcome tk-outcome-${o.tone}`} disabled={!canAct || o.disabled} title={o.title} onClick={() => setDialog(o.id)}>
+          <button key={o.id} type="button" className={`tk-outcome tk-outcome-${o.tone}`} disabled={!outcomesOn || o.disabled} title={o.title} onClick={() => setDialog(o.id)}>
             <span className="tk-outcome-ic" aria-hidden="true"><Icon name={o.icon} size={16} /></span>
             <span className="tk-outcome-text">
               <span className="tk-outcome-label">{o.label}</span>

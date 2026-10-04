@@ -285,7 +285,7 @@ export function Countdown({ deadline, compact }: { deadline: string; compact?: b
   return (
     <span className={`countdown countdown-${tone} num ${compact ? 'countdown-compact' : ''}`} title={c.overdue ? 'Overdue' : 'Time left'}>
       <Icon name="clock" size={13} />
-      {c.overdue ? `${c.text} overdue` : c.text}
+      {c.overdue ? `${c.text.replace(/^−/, '')} overdue` : c.text}
     </span>
   )
 }

@@ -54,7 +54,7 @@ export function NotesTab({ client }: { client: Client }) {
       )}
 
       {shown.length === 0 ? (
-        <EmptyState icon="edit" title={notes.length ? 'No notes of this kind' : 'No notes yet'} body="Notes are for things the team should know: preferences, what was promised on a call, anything the AI can't see. Add the first one above." />
+        <EmptyState icon="edit" title={notes.length ? 'No notes of this kind' : 'No notes yet'} body={notes.length ? 'Switch the filter to see the other notes.' : "Notes are for things the team should know: preferences, what was promised on a call, anything the AI can't see. Add the first one above."} />
       ) : (
         <ul className="cr-notes">
           {shown.map(n => (

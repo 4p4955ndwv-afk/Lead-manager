@@ -71,6 +71,7 @@
 .ib-window.is-warn { background: var(--warn-soft); color: var(--warn); }
 .ib-window.is-danger { background: var(--danger-soft); color: var(--danger); }
 .ib-window b { font-weight: 600; }
+.ib-nowrap { white-space: nowrap; }
 .ib-window-mode { display: inline-flex; align-items: center; align-self: center; gap: 6px; margin-left: auto; flex: none; }
 .ib-window-mode-label { color: var(--muted); }
 .ib-window.ib-window-tag { display: grid; gap: 8px; }
@@ -90,7 +91,7 @@
 .ib-banner .ib-link-btn { flex: none; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* messages */
-.ib-messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 20px; overscroll-behavior: contain; }
+.ib-messages { flex: 1 1 0%; min-height: 96px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 20px; overscroll-behavior: contain; }
 .ib-day { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px; color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 .ib-day::before, .ib-day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .ib-sys { align-self: center; display: inline-flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 2px 8px; max-width: 88%; padding: 4px 12px; border-radius: 12px; background: var(--sunk); color: var(--ink-2); font-size: 12px; text-align: center; }
@@ -126,7 +127,10 @@
 .ib-warn-text { color: var(--warn); }
 
 /* footer: draft, composer, demo */
-.ib-footer { flex: none; display: grid; gap: 8px; padding: 10px 16px 12px; background: var(--surface); border-top: 1px solid var(--line); }
+.ib-footer { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 12px; background: var(--surface); border-top: 1px solid var(--line); }
+.ib-footer > * { flex: none; }
+/* on short screens the draft card shrinks and scrolls so the reply box stays reachable */
+.ib-footer > .ib-draft { flex: 0 1 auto; min-height: 92px; overflow-y: auto; grid-auto-rows: max-content; }
 
 .ib-draft { display: grid; gap: 8px; padding: 12px 14px 12px 16px; border: 1px solid var(--accent-line); border-radius: var(--r-md); background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
 .ib-draft-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
@@ -210,6 +214,8 @@
 .ib-ctx-task, .ib-ctx-appt { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--ink); text-align: left; cursor: pointer; }
 .ib-ctx-appt { align-items: center; }
 .ib-ctx-task:hover, .ib-ctx-appt:hover { border-color: var(--line-strong); }
+.ib-ctx-task.is-static, .ib-ctx-appt.is-static { cursor: default; }
+.ib-ctx-task.is-static:hover, .ib-ctx-appt.is-static:hover { border-color: var(--line); }
 .ib-ctx-task-title { overflow-wrap: anywhere; }
 .ib-ctx-task-icon, .ib-ctx-appt-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--sunk); color: var(--ink-2); }
 .ib-ctx-task-icon.is-urgent { background: var(--warn-soft); color: var(--warn); }
@@ -246,6 +252,7 @@
 
 @container ib-thread (max-width: 430px) {
   .ib-th-id > .avatar { display: none; }
+  .ib-draft-conf .progress { width: 44px; }
 }
 
 /* ---------- phone ---------- */

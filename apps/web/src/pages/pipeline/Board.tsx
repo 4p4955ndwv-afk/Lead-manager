@@ -5,7 +5,7 @@ import type { Stage } from '../../lib/types'
 import { STAGES, STAGE_LABEL } from '../../lib/types'
 import { ms } from '../../lib/time'
 import { PipelineCard } from './PipelineCard'
-import { moveRule, type Pos, type PRow } from './model'
+import { isCardDrag, moveRule, type Pos, type PRow } from './model'
 
 export const STAGE_HELP: Record<Stage, string> = {
   new: 'New DMs the AI has not qualified yet.',
@@ -79,7 +79,7 @@ export function Board({ rows, now, showMoney, fmtMoney, canMove, canOverride, dr
 
   const dropProps = (key: string, to: Pos) => canMove ? {
     onDragOver: (e: DragEvent<HTMLElement>) => {
-      if (!dragRow) return
+      if (!dragRow && !isCardDrag(e.dataTransfer)) return
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
       if (over !== key) setOver(key)

@@ -59,7 +59,7 @@ export function ScheduleModal({ open, onClose, client, episode, preset, onBooked
   const clash = !Number.isNaN(startMs) ? state.appointments.find(a => a.practitionerId === practitionerId && a.status !== 'cancelled' && ms(a.start) < endMs && ms(a.end) > startMs) : undefined
   const roomClash = !Number.isNaN(startMs) ? state.appointments.find(a => a.roomId === roomId && a.status !== 'cancelled' && ms(a.start) < endMs && ms(a.end) > startMs) : undefined
   const past = !Number.isNaN(startMs) && startMs < Date.now() - 5 * MIN
-  const invalid = Number.isNaN(startMs) || !practitionerId || !roomId || (type !== 'follow_up' && !procedureId)
+  const invalid = Number.isNaN(startMs) || past || !practitionerId || !roomId || (type !== 'follow_up' && !procedureId)
   const clashName = (a: Appointment) => state.clients.find(c => c.id === a.clientId)?.name ?? 'another client'
   const practitioner = state.users.find(u => u.id === practitionerId)
 
@@ -77,6 +77,11 @@ export function ScheduleModal({ open, onClose, client, episode, preset, onBooked
     })
     if (type === 'consultation' && !episode.exit && STAGES.indexOf(episode.stage) < STAGES.indexOf('booked')) {
       actions.moveStage(episode.id, 'booked', { reason: 'Consultation booked from the client record' })
+    }
+    // the lead's "call to book a consultation" task is done once one is booked, so its SLA stops counting
+    if (type === 'consultation') {
+      state.tasks.filter(t => t.clientId === client.id && t.status === 'open' && (t.type === 'call' || t.type === 'callback'))
+        .forEach(t => actions.completeTask(t.id, 'Consultation booked from the client record'))
     }
     onBooked?.(id, startIso)
     actions.toast(`Booked: ${title}, ${dateTime(startIso)} with ${practitioner?.name ?? 'the clinician'}.`, 'success', canOpen(me, 'calendar') ? { label: 'Open calendar', page: 'calendar', id } : undefined)

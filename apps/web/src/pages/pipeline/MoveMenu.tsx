@@ -15,6 +15,19 @@ interface Props {
 
 const SHEET_BREAKPOINT = 600
 
+/** True while the trigger is visible: inside the viewport and not clipped by a scrolling column or board. */
+function inView(el: HTMLElement, r: DOMRect): boolean {
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return false
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const cs = getComputedStyle(p)
+    if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue
+    const pr = p.getBoundingClientRect()
+    if (cx < pr.left || cx > pr.right || cy < pr.top || cy > pr.bottom) return false
+  }
+  return true
+}
+
 export function MoveMenu({ row, canOverride, onPick, className = '' }: Props) {
   const [open, setOpen] = useState(false)
   const btn = useRef<HTMLButtonElement>(null)
@@ -28,10 +41,11 @@ export function MoveMenu({ row, canOverride, onPick, className = '' }: Props) {
   }, [])
 
   // position next to the trigger (desktop) — phones use a bottom sheet from CSS
-  useLayoutEffect(() => {
-    if (!open || !btn.current) return
-    if (window.innerWidth < SHEET_BREAKPOINT) { setPos(null); return }
+  const place = useCallback((): boolean => {
+    if (!btn.current) return false
+    if (window.innerWidth < SHEET_BREAKPOINT) { setPos(null); return true }
     const r = btn.current.getBoundingClientRect()
+    if (!inView(btn.current, r)) return false
     const width = 280
     const margin = 8
     const spaceBelow = window.innerHeight - r.bottom - margin
@@ -41,7 +55,12 @@ export function MoveMenu({ row, canOverride, onPick, className = '' }: Props) {
     const left = Math.min(Math.max(margin, r.right - width), window.innerWidth - width - margin)
     const top = below ? r.bottom + 4 : Math.max(margin, r.top - 4 - maxHeight)
     setPos({ top, left, maxHeight })
-  }, [open])
+    return true
+  }, [])
+
+  useLayoutEffect(() => {
+    if (open && !place()) setOpen(false)
+  }, [open, place])
 
   useEffect(() => {
     if (!open) return
@@ -50,9 +69,10 @@ export function MoveMenu({ row, canOverride, onPick, className = '' }: Props) {
       if (pop.current?.contains(t) || btn.current?.contains(t)) return
       setOpen(false)
     }
+    // the board scrolls (and snaps) under the menu: follow the trigger, and close only once it is out of view
     const onScroll = (e: Event) => {
       if (pop.current && e.target instanceof Node && pop.current.contains(e.target)) return
-      if (window.innerWidth >= SHEET_BREAKPOINT) setOpen(false)
+      if (window.innerWidth >= SHEET_BREAKPOINT && !place()) setOpen(false)
     }
     const onResize = () => setOpen(false)
     document.addEventListener('mousedown', onDown)
@@ -66,7 +86,7 @@ export function MoveMenu({ row, canOverride, onPick, className = '' }: Props) {
       window.removeEventListener('scroll', onScroll, true)
       window.removeEventListener('resize', onResize)
     }
-  }, [open])
+  }, [open, place])
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const items = Array.from(pop.current?.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]:not(:disabled)') ?? [])

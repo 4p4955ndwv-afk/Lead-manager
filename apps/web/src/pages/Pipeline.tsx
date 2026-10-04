@@ -12,7 +12,7 @@ import { ExitLane } from './pipeline/ExitLane'
 import { ListView } from './pipeline/ListView'
 import { FilterBar } from './pipeline/Filters'
 import {
-  EXIT_HELP, NO_FILTERS, activeFilterCount, applyFilters, buildRows, isExit, isStage, moveRule, nextStage, posLabel, summarise,
+  DRAG_TYPE, EXIT_HELP, NO_FILTERS, activeFilterCount, applyFilters, buildRows, isExit, isStage, moveRule, nextStage, posLabel, summarise,
   type Filters, type Pos, type PRow, type Sort,
 } from './pipeline/model'
 import './pipeline.css'
@@ -22,7 +22,6 @@ interface Prefs { view: View; filters: Filters; sort: Sort; exitTab: Exit }
 
 const PREFS_KEY = 'lm-pipeline-prefs'
 const DEFAULT_PREFS: Prefs = { view: 'board', filters: NO_FILTERS, sort: { key: 'changed', dir: 'desc' }, exitTab: 'nurture' }
-const DRAG_TYPE = 'application/x-lm-episode'
 
 function loadPrefs(): Prefs {
   try {
@@ -134,7 +133,11 @@ export default function Pipeline() {
       undoSeq.current += 1
       const noAppt = to === 'booked' && !state.appointments.some(a => a.clientId === row.client.id && ms(a.start) > now && a.status !== 'cancelled')
       setUndo({ token: undoSeq.current, epId: row.ep.id, clientId: row.client.id, name, from: row.pos, to, noAppt })
-    } else if (rule.kind === 'skip' || rule.kind === 'back') {
+      return
+    }
+    // any other move of the same person makes their undo stale
+    setUndo(u => (u && u.epId === row.ep.id ? null : u))
+    if (rule.kind === 'skip' || rule.kind === 'back') {
       actions.toast(`${name} moved to ${posLabel(to)}. Your reason is in the audit log.`, 'success')
     } else if (rule.kind === 'exit') {
       actions.toast(`${name} moved to ${EXIT_LABEL[to as Exit]}.`, 'info')

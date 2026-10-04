@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Conversation, Task, TaskType } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
 import { activeEpisode, byId, useStore } from '../../lib/store'
-import { maskPhone } from '../../lib/permissions'
+import { canOpen, maskPhone } from '../../lib/permissions'
 import { ago, dateTime, money, ms, until, useNow } from '../../lib/time'
 import { Avatar, Button, ChannelBadge, Chip, Countdown, Progress, StageBadge, UserAvatar } from '../../components/ui'
 import { Icon, type IconName } from '../../components/icons'
@@ -123,16 +123,20 @@ export function ContextPanel({ conv }: { conv: Conversation }) {
 
       <section className="ib-ctx-sec">
         <h3 className="eyebrow">Next appointment</h3>
-        {nextAppt ? (
-          <button type="button" className="ib-ctx-appt" onClick={() => actions.go('calendar', nextAppt.id)}>
+        {nextAppt ? (() => {
+          const inner = <>
             <span className="ib-ctx-appt-icon"><Icon name="calendar" size={16} /></span>
             <span className="stack grow" style={{ gap: 1 }}>
               <span className="strong small">{APPT_LABEL[nextAppt.type]}{nextAppt.procedureId ? ` · ${byId(state.procedures, nextAppt.procedureId)?.name ?? ''}` : ''}{nextAppt.sessionNo ? ` · session ${nextAppt.sessionNo}` : ''}</span>
               <span className="tiny muted num">{dateTime(nextAppt.start)} · {until(nextAppt.start, now)} · {byId(state.users, nextAppt.practitionerId)?.name}</span>
             </span>
             <Chip tone={APPT_STATUS_TONE[nextAppt.status]}>{nextAppt.status === 'unconfirmed' ? 'Unconfirmed' : nextAppt.status === 'arrived' ? 'Arrived' : 'Confirmed'}</Chip>
-          </button>
-        ) : <p className="small muted">Nothing booked. Appointments booked on the call show up here.</p>}
+          </>
+          // roles without the calendar see the appointment but get no link that would bounce them to Today
+          return canOpen(me, 'calendar')
+            ? <button type="button" className="ib-ctx-appt" onClick={() => actions.go('calendar', nextAppt.id)}>{inner}</button>
+            : <div className="ib-ctx-appt is-static">{inner}</div>
+        })() : <p className="small muted">Nothing booked. Appointments booked on the call show up here.</p>}
       </section>
 
       <section className="ib-ctx-sec">
@@ -147,22 +151,24 @@ export function ContextPanel({ conv }: { conv: Conversation }) {
 }
 
 function TaskRow({ t, meId, now }: { t: Task; meId: string; now: number }) {
-  const { state, actions } = useStore()
+  const { state, me, actions } = useStore()
   const assignee = byId(state.users, t.assignedTo)
   const overdue = ms(t.dueAt) < now
+  const linked = canOpen(me, 'tasks')
+  const Row = linked ? 'button' : 'div'
   return (
     <li>
-      <button type="button" className="ib-ctx-task" onClick={() => actions.go('tasks', t.id)}>
+      <Row {...(linked ? { type: 'button' as const, onClick: () => actions.go('tasks', t.id) } : {})} className={`ib-ctx-task ${linked ? '' : 'is-static'}`}>
         <span className={`ib-ctx-task-icon ${t.priority === 'urgent' ? 'is-urgent' : ''}`}><Icon name={TASK_ICON[t.type]} size={15} /></span>
         <span className="stack grow" style={{ gap: 2 }}>
           <span className="small strong ib-ctx-task-title">{t.title}</span>
           <span className="tiny muted">{t.assignedTo === meId ? 'You' : assignee ? `${assignee.name} · ${ROLE_LABEL[assignee.role]}` : 'Unassigned'}</span>
           <span className="row wrap" style={{ gap: 6 }}>
             {t.slaMinutes ? <Countdown deadline={t.dueAt} compact /> : <Chip tone={overdue ? 'danger' : 'neutral'} icon="clock">{overdue ? `Overdue · due ${ago(t.dueAt, now)}` : `Due ${until(t.dueAt, now)}`}</Chip>}
-            {t.escalationLevel > 0 && <Chip tone="danger" icon="alert">Escalated to {t.escalationLevel === 1 ? 'manager' : 'owner'}</Chip>}
+            {t.escalationLevel > 0 && !!t.slaMinutes && <Chip tone="danger" icon="alert">Escalated to {t.escalationLevel === 1 ? 'manager' : 'owner'}</Chip>}
           </span>
         </span>
-      </button>
+      </Row>
     </li>
   )
 }

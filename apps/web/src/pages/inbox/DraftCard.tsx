@@ -70,6 +70,9 @@ export function DraftCard({ conv, sendBlocked, canEdit = true, editing, onEdit, 
   }
 
   const liveBusy = busy === 'claude' || (busy !== null && claudeBusy)
+  // the kill switch stops all AI writing, including new drafts
+  const killed = state.ai.killSwitch
+  const killedTitle = 'AI replies are paused for everyone, so the AI cannot write a new draft.'
 
   return (
     <section className="ib-draft" aria-label="AI draft reply">
@@ -121,8 +124,8 @@ export function DraftCard({ conv, sendBlocked, canEdit = true, editing, onEdit, 
               <Button size="sm" variant="secondary" icon="edit" onClick={onEdit} disabled={busy !== null || !canEdit}>Edit</Button>
             </>
           )}
-          <Button size="sm" variant="ghost" icon="refresh" title="Write a new draft with the built-in demo engine" onClick={() => regenerate(false)} loading={busy === 'rule'} disabled={busy !== null}><span className="ib-collapse">Regenerate</span></Button>
-          <Button size="sm" variant="subtle" icon="sparkles" loading={liveBusy} onClick={() => regenerate(true)} disabled={busy !== null}>
+          <Button size="sm" variant="ghost" icon="refresh" title={killed ? killedTitle : 'Write a new draft with the built-in demo engine'} onClick={() => regenerate(false)} loading={busy === 'rule'} disabled={busy !== null || killed}><span className="ib-collapse">Regenerate</span></Button>
+          <Button size="sm" variant="subtle" icon="sparkles" loading={liveBusy} title={killed ? killedTitle : undefined} onClick={() => regenerate(true)} disabled={busy !== null || killed}>
             {liveBusy ? 'Asking Claude…' : 'Draft with live Claude'}
           </Button>
           <Button size="sm" variant="ghost" icon="trash" title="Discard this draft" onClick={discard} disabled={busy !== null}><span className="ib-collapse">Discard</span></Button>

@@ -114,7 +114,7 @@ textarea.input { resize: vertical; line-height: 1.45; }
 .checkbox input { width: 16px; height: 16px; accent-color: var(--accent); }
 
 /* ---------- tables ---------- */
-.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.table-wrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
 .table { width: 100%; font-size: 13.5px; }
 .table th, .table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .table th { font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); white-space: nowrap; }
@@ -149,7 +149,7 @@ textarea.input { resize: vertical; line-height: 1.45; }
 .toast-success { border-left: 4px solid var(--ok); }
 .toast-warn { border-left: 4px solid var(--warn); }
 .toast-danger { border-left: 4px solid var(--danger); }
-@media (max-width: 860px) { .toasts { top: auto; bottom: calc(var(--tabbar-h) + 12px + env(safe-area-inset-bottom, 0px)); } }
+@media (max-width: 860px) { .toasts { top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 8px); bottom: auto; } }
 
 @media (max-width: 860px) {
   .page { padding: 16px 16px 32px; gap: 16px; }
@@ -157,3 +157,6 @@ textarea.input { resize: vertical; line-height: 1.45; }
 
 /* icons never shrink inside tight flex rows */
 .btn svg, .icon-btn svg, .chip svg, .tab, .tab svg, .channel svg, .countdown svg, .nav-item svg, .stat-label svg { flex: none; }
+
+/* disabled buttons must look disabled in dark mode too */
+.btn:disabled { filter: saturate(.35); }

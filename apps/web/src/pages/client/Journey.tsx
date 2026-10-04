@@ -84,7 +84,7 @@ export function Journey({ client, episodes, episode, onSelect, onNewEpisode, can
       </div>
 
       <div className="cr-steps-scroll" ref={scroller}>
-        <ol className="cr-steps">
+        <ol className="cr-steps" onMouseLeave={() => { if (!scroller.current?.contains(document.activeElement)) setPeek(cur) }}>
           {steps.map(({ st, i, entry, s }) => (
             <li key={st} className={`cr-step is-${s}`} data-step={i}>
               <button type="button" className={`cr-step-btn ${peek === i ? 'is-peek' : ''}`}
@@ -124,7 +124,7 @@ export function Journey({ client, episodes, episode, onSelect, onNewEpisode, can
           </span>
         </div>
       )}
-      {episode.endedAt && !episode.exit && (
+      {episode.endedAt && episode.stage === 'alumni' && !episode.exit && (
         <p className="tiny muted cr-journey-foot">Completed {dayYear(episode.endedAt)}. {latest?.id === episode.id ? 'A return visit starts a new episode.' : ''}</p>
       )}
     </section>

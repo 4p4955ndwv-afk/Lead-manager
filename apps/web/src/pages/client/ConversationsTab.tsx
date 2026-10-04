@@ -1,11 +1,11 @@
 // Conversations tab: every DM or WhatsApp thread with this person, with who is answering and the latest message.
 import { userName, useStore } from '../../lib/store'
 import type { Client } from '../../lib/types'
-import { CHANNEL_LABEL } from '../../lib/types'
 import { canOpen } from '../../lib/permissions'
 import { ago, dateTime, ms, replyWindow, useNow } from '../../lib/time'
 import { Button, ChannelBadge, Chip, EmptyState } from '../../components/ui'
 import { first } from './dialogs'
+import { channelPhrase } from './helpers'
 
 export function ConversationsTab({ client }: { client: Client }) {
   const { state, me, actions } = useStore()
@@ -17,7 +17,7 @@ export function ConversationsTab({ client }: { client: Client }) {
     return (
       <div className="card">
         <EmptyState icon="message" title="No message threads"
-          body={`${first(client.name)} came in via ${CHANNEL_LABEL[client.source.channel].toLowerCase()}. If they DM us on Instagram or TikTok, the thread is linked here automatically.`} />
+          body={`${first(client.name)} came in via ${channelPhrase(client.source.channel)}. If they DM us on Instagram or TikTok, the thread is linked here automatically.`} />
       </div>
     )
   }
@@ -40,9 +40,13 @@ export function ConversationsTab({ client }: { client: Client }) {
             </div>
             {last && <p className="small cr-conv-last"><span className="strong">{who}:</span> {last.text}</p>}
             <div className="row wrap" style={{ gap: 6 }}>
-              <Chip tone={c.handling === 'ai' ? 'accent' : c.handling === 'human' ? 'team' : 'neutral'} icon={c.handling === 'ai' ? 'sparkles' : c.handling === 'human' ? 'hand' : 'pause'}>
-                {c.handling === 'ai' ? 'AI answering' : c.handling === 'human' ? `${c.assignedTo ? userName(state, c.assignedTo).split(' ')[0] : 'Staff'} answering` : 'Paused'}
-              </Chip>
+              {c.handling === 'ai' && state.ai.killSwitch ? (
+                <Chip tone="warn" icon="pause" title="The kill switch has paused AI replies in every chat">AI paused for everyone</Chip>
+              ) : (
+                <Chip tone={c.handling === 'ai' ? 'accent' : c.handling === 'human' ? 'team' : 'neutral'} icon={c.handling === 'ai' ? 'sparkles' : c.handling === 'human' ? 'hand' : 'pause'}>
+                  {c.handling === 'ai' ? 'AI answering' : c.handling === 'human' ? `${c.assignedTo ? userName(state, c.assignedTo).split(' ')[0] : 'Staff'} answering` : 'Paused'}
+                </Chip>
+              )}
               {c.needsHuman && <Chip tone="warn" icon="alert">{c.needsHumanReason ?? 'Needs a person'}</Chip>}
               {c.draft && <Chip tone="info">Draft ready</Chip>}
               {c.channel !== 'whatsapp' && c.channel !== 'sms' && (

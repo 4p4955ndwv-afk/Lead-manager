@@ -63,9 +63,12 @@ export function isManager(me: User, can: (p: 'pipeline.override') => boolean): b
   return can('pipeline.override') || me.role === 'owner' || me.role === 'manager'
 }
 
+/** The call deadline was missed and nobody has called yet (a logged attempt ends the SLA). */
+export const isEscalated = (t: Task) => t.status === 'open' && t.escalationLevel > 0 && !!t.slaMinutes
+
 /** Escalated tasks land in the manager's (level 1+) or owner's (level 2) own list too. */
 export function escalatedTo(me: User, t: Task): boolean {
-  if (t.assignedTo === me.id) return false
+  if (t.assignedTo === me.id || !isEscalated(t)) return false
   if (me.role === 'manager') return t.escalationLevel >= 1
   if (me.role === 'owner') return t.escalationLevel === 2
   return false

@@ -29,7 +29,7 @@ export function Directory() {
   const rows = useMemo(() => state.clients.map(c => {
     const ep = latestEpisode(state, c.id)
     const epCount = state.episodes.filter(e => e.clientId === c.id).length
-    const openCall = state.tasks.find(t => t.clientId === c.id && t.status === 'open' && (t.type === 'call' || t.type === 'callback'))
+    const openCall = state.tasks.filter(t => t.clientId === c.id && t.status === 'open' && (t.type === 'call' || t.type === 'callback')).sort((a, b) => ms(a.dueAt) - ms(b.dueAt))[0]
     return { c, ep, epCount, openCall, last: lastActivity(state, c.id, now) }
   }), [state, now])
 
@@ -210,7 +210,7 @@ export function Directory() {
                     <td className="cr-td-stage">
                       <span className="row wrap" style={{ gap: 6 }}>
                         {ep ? <StageBadge stage={ep.stage} exit={ep.exit} /> : <span className="faint">—</span>}
-                        {openCall && <Chip tone={openCall.escalationLevel ? 'danger' : 'warn'} icon="phone">{openCall.escalationLevel ? 'Call overdue' : 'Call due'}</Chip>}
+                        {openCall && (ms(openCall.dueAt) < now ? <Chip tone="danger" icon="phone">Call overdue</Chip> : <Chip tone={openCall.escalationLevel ? 'danger' : 'warn'} icon="phone">Call due</Chip>)}
                       </span>
                     </td>
                     <td className="cr-td-owner">

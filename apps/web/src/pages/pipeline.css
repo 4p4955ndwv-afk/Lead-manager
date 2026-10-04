@@ -99,10 +99,12 @@
 .pl-exit-actions .btn span { overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- list ---------- */
+/* positioned so the sr-only header text (absolute) stays inside the scroller instead of widening the page on phones */
+.pl-table-wrap { position: relative; }
 .pl-table { min-width: 900px; }
 .pl-table th.pl-th-num, .pl-table td.pl-td-num { text-align: right; }
 .pl-table th.pl-th-num .pl-sort { flex-direction: row-reverse; }
-.pl-sort { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
+.pl-sort { display: inline-flex; align-items: center; vertical-align: middle; gap: 4px; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; cursor: pointer; }
 .pl-sort:hover, .pl-sort.is-active { color: var(--ink); }
 .pl-sort-icon { opacity: .35; transition: transform .12s; }
 .pl-sort.is-active .pl-sort-icon { opacity: 1; }

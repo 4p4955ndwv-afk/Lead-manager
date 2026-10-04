@@ -128,6 +128,7 @@ function NextUp({ client, episode, onTab }: { client: Client; episode?: Episode;
     : episode.exit === 'spam' ? 'Marked as spam. Nothing is scheduled.'
     : episode.exit ? `Off the path (${episode.exitReason ?? 'no reason given'}). Start a new episode if they come back.`
     : episode.stage === 'alumni' ? 'Journey complete. A return visit starts a new episode.'
+    : !client.phone ? 'Nothing scheduled yet. No number has been shared; a call task appears as soon as they share one in the chat.'
     : 'No open tasks, visits or payments. Log a call or book an appointment to set the next step.'
 
   return (

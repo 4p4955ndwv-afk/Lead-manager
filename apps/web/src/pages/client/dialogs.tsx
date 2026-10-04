@@ -1,13 +1,14 @@
 // Dialogs opened from the client record header: log a call, edit details, merge a duplicate, erase a person,
 // move the journey stage and start a new episode for a returning client.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useStore } from '../../lib/store'
 import type { CallOutcome, Client, Episode, Exit, Stage, Task } from '../../lib/types'
-import { EXITS, EXIT_LABEL, STAGES, STAGE_LABEL } from '../../lib/types'
-import { formatPhone, maskPhone } from '../../lib/permissions'
+import { EXITS, EXIT_LABEL, ROLE_LABEL, STAGES, STAGE_LABEL } from '../../lib/types'
+import { can as userCan, formatPhone, maskPhone } from '../../lib/permissions'
 import { DAY, HOUR, MIN, dateTime, iso, ms, uid } from '../../lib/time'
 import { Avatar, Button, Chip, Field, Modal, ReasonDialog, StageBadge, Toggle } from '../../components/ui'
 import { Icon } from '../../components/icons'
+import { moveRule, type MoveKind } from '../pipeline/model'
 import { CALL_OUTCOME_LABEL, LANG_LABEL, bookingBlock, episodesOf, handlesOf, initials, latestEpisode, localInput, nextSlot, relatedIds, stageIndex, toE164 } from './helpers'
 
 const first = (name: string) => name.split(' ')[0]
@@ -47,7 +48,9 @@ export function LogCallModal({ open, onClose, client, episode }: { open: boolean
   const needsNote = outcome === 'not_interested' || outcome === 'wrong_number'
   const startMs = start ? new Date(start).getTime() : NaN
   const cbMs = callbackAt ? new Date(callbackAt).getTime() : NaN
-  const invalid = (needsNote && note.trim().length < 3) || (outcome === 'booked' && Number.isNaN(startMs)) || (outcome === 'call_back' && Number.isNaN(cbMs))
+  const startPast = outcome === 'booked' && !Number.isNaN(startMs) && startMs < Date.now() - 5 * MIN
+  const cbPast = outcome === 'call_back' && !Number.isNaN(cbMs) && cbMs < Date.now() - 5 * MIN
+  const invalid = (needsNote && note.trim().length < 3) || (outcome === 'booked' && Number.isNaN(startMs)) || (outcome === 'call_back' && Number.isNaN(cbMs)) || startPast || cbPast
 
   const save = () => {
     if (invalid) return
@@ -104,7 +107,7 @@ export function LogCallModal({ open, onClose, client, episode }: { open: boolean
 
         {outcome === 'booked' && (
           <div className="cr-form-2">
-            <Field label="Consultation date and time">
+            <Field label="Consultation date and time" error={startPast ? 'That time has already passed.' : undefined}>
               {id => <input id={id} className="input num" type="datetime-local" step={900} value={start} onChange={e => setStart(e.target.value)} />}
             </Field>
             <Field label="For">
@@ -127,7 +130,7 @@ export function LogCallModal({ open, onClose, client, episode }: { open: boolean
           </div>
         )}
         {outcome === 'call_back' && (
-          <Field label="Call back at">
+          <Field label="Call back at" error={cbPast ? 'That time has already passed.' : undefined}>
             {id => <input id={id} className="input num" type="datetime-local" step={900} value={callbackAt} onChange={e => setCallbackAt(e.target.value)} />}
           </Field>
         )}
@@ -449,52 +452,53 @@ export function EraseFlow({ open, onClose, client }: { open: boolean; onClose: (
 }
 
 // ---- Move stage ------------------------------------------------------------------------------------
-
-type MoveKind = 'next' | 'skip' | 'back' | 'exit' | 'return' | 'same'
-
-function classify(ep: Episode, to: Stage | Exit): MoveKind {
-  const isExit = (EXITS as string[]).includes(to)
-  if (isExit) return ep.exit === to ? 'same' : 'exit'
-  const cur = stageIndex(ep.stage)
-  const t = stageIndex(to as Stage)
-  if (ep.exit) return t === cur || t === cur + 1 ? 'return' : t > cur ? 'skip' : 'back'
-  if (t === cur) return 'same'
-  if (t === cur + 1) return 'next'
-  return t > cur ? 'skip' : 'back'
-}
+// Uses the same move rules as the pipeline board, so a move that needs an override there needs one here too.
 
 export function MoveStageFlow({ open, onClose, client, episode }: { open: boolean; onClose: () => void; client: Client; episode: Episode }) {
-  const { can, actions } = useStore()
+  const { state, me, can, actions } = useStore()
   const [target, setTarget] = useState<Stage | Exit | undefined>()
-  const [reasonFor, setReasonFor] = useState<{ to: Stage | Exit; kind: MoveKind } | undefined>()
+  const [reasonFor, setReasonFor] = useState<{ to: Stage | Exit; kind: MoveKind; override: boolean } | undefined>()
   useEffect(() => { if (open) setTarget(undefined) }, [open])
   const canMove = can('pipeline.move')
   const canOverride = can('pipeline.override')
-  const allowed = (k: MoveKind) => k === 'same' ? false : k === 'skip' || k === 'back' ? canOverride : canMove
+  const pos: Stage | Exit = episode.exit ?? episode.stage
+  const rule = (to: Stage | Exit) => moveRule({ pos, ep: episode }, to)
+  const allowed = (to: Stage | Exit) => { const r = rule(to); return r.kind !== 'same' && canMove && (!r.needsOverride || canOverride) }
   const label = (x: Stage | Exit) => (EXITS as string[]).includes(x) ? EXIT_LABEL[x as Exit] : STAGE_LABEL[x as Stage]
+  const overriders = state.users.filter(u => u.status === 'active' && userCan(u, 'pipeline.override') && u.id !== me.id)
 
-  const hint = (k: MoveKind): string => ({
-    next: 'Next step', skip: 'Skip · override', back: 'Back · override', exit: 'Needs a reason', return: 'Return · needs a reason', same: 'Current',
-  })[k]
+  const hint = (to: Stage | Exit): string => {
+    const r = rule(to)
+    if (r.kind === 'same') return 'Current'
+    if (r.needsOverride && !canOverride) return 'Manager only'
+    return ({
+      next: 'Next step', skip: 'Skip · override', back: 'Back · override', exit: r.needsOverride ? 'Override · reason' : 'Needs a reason',
+      return: r.needsOverride ? 'Return · override' : 'Return · needs a reason', same: 'Current',
+    } as Record<MoveKind, string>)[r.kind]
+  }
 
   const go = () => {
-    if (!target) return
-    const kind = classify(episode, target)
-    if (kind === 'next') {
+    if (!target || !allowed(target)) return
+    const r = rule(target)
+    if (!r.needsReason) {
       actions.moveStage(episode.id, target)
       actions.toast(`${first(client.name)} moved to ${label(target)}.`, 'success')
       onClose()
       return
     }
-    setReasonFor({ to: target, kind })
+    setReasonFor({ to: target, kind: r.kind, override: r.needsOverride })
   }
 
   const apply = (reason: string) => {
     if (!reasonFor) return
-    const { to, kind } = reasonFor
-    actions.moveStage(episode.id, to, { reason, override: kind === 'skip' || kind === 'back' })
+    const { to, kind, override } = reasonFor
+    actions.moveStage(episode.id, to, { reason, override: override || undefined })
     if (to === 'dnc') actions.update(d => { const c = d.clients.find(x => x.id === client.id); if (c) c.doNotContact = true })
-    actions.toast(kind === 'exit' ? `${first(client.name)} is off the path: ${label(to)}.` : `${first(client.name)} moved to ${label(to)}${kind === 'skip' || kind === 'back' ? ' (override logged)' : ''}.`, 'success')
+    if (kind === 'return' && episode.exit === 'dnc' && client.doNotContact) {
+      actions.update(d => { const c = d.clients.find(x => x.id === client.id); if (c) c.doNotContact = false })
+      actions.audit({ action: 'client.dnc_cleared', target: { type: 'client', id: client.id, label: client.name }, detail: 'Do-not-contact switched off when brought back to the journey', reason })
+    }
+    actions.toast(kind === 'exit' ? `${first(client.name)} is off the path: ${label(to)}.` : `${first(client.name)} moved to ${label(to)}${override ? ' (override logged)' : ''}.`, 'success')
     setReasonFor(undefined)
     onClose()
   }
@@ -508,52 +512,53 @@ export function MoveStageFlow({ open, onClose, client, episode }: { open: boolea
     skip: `This skips ${skipped.join(', ')}. It is logged as an override.`,
     back: 'Moving backwards is logged as an override. Tasks and appointments are not changed.',
     exit: reasonFor?.to === 'dnc' ? 'This also turns on Do not contact: no calls, messages or AI replies.' : 'Open tasks stay open until someone closes them.',
-    return: `They left the path as ${episode.exit ? EXIT_LABEL[episode.exit] : ''}. Say what changed.`,
+    return: `They left the path as ${episode.exit ? EXIT_LABEL[episode.exit] : ''}${episode.exitReason ? ` (“${episode.exitReason}”)` : ''}. Say what changed.${episode.exit === 'dnc' ? ' Their do-not-contact flag will be switched off.' : ''}${reasonFor?.override ? ' This is logged as an override.' : ''}`,
     next: '', same: '',
+  }
+  const anyLocked = canMove && !canOverride && [...STAGES, ...EXITS].some(x => rule(x).needsOverride)
+
+  const option = (x: Stage | Exit, lead: ReactNode) => {
+    const ok = allowed(x)
+    const current = rule(x).kind === 'same'
+    return (
+      <button key={x} type="button" className={`cr-move-opt ${target === x ? 'is-active' : ''} ${current ? 'is-current' : ''}`} disabled={!ok} aria-pressed={target === x} onClick={() => setTarget(x)}>
+        {lead}
+        <span className="grow">{label(x)}</span>
+        <span className="tiny muted">{!ok && !current && !canOverride && rule(x).needsOverride ? <><Icon name="lock" size={12} /> {hint(x)}</> : hint(x)}</span>
+      </button>
+    )
   }
 
   return (
     <>
       <Modal open={open && !reasonFor} onClose={onClose} width={560} title={`Move ${first(client.name)}'s journey`}
-        description={<>Episode {episode.number} is at <strong>{episode.exit ? EXIT_LABEL[episode.exit] : STAGE_LABEL[episode.stage]}</strong>. One step forward needs no reason; skipping, going back or leaving the path asks for one.</>}
+        description={<>Episode {episode.number} is at <strong>{label(pos)}</strong>. One step forward needs no reason; skipping, going back or leaving the path asks for one.</>}
         footer={<>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" icon="arrowRight" disabled={!target} onClick={go}>{target ? `Move to ${label(target)}` : 'Pick a stage'}</Button>
+          <Button variant="primary" icon="arrowRight" disabled={!target || !allowed(target)} onClick={go}>{target ? `Move to ${label(target)}` : 'Pick a stage'}</Button>
         </>}>
-        <div className="cr-move">
-          <div className="stack" style={{ gap: 4 }}>
-            <span className="eyebrow">Journey</span>
-            {STAGES.map((s, i) => {
-              const k = classify(episode, s)
-              const ok = allowed(k)
-              return (
-                <button key={s} type="button" className={`cr-move-opt ${target === s ? 'is-active' : ''} ${k === 'same' ? 'is-current' : ''}`} disabled={!ok} aria-pressed={target === s} onClick={() => setTarget(s)}>
-                  <span className="cr-move-no num">{i + 1}</span>
-                  <span className="grow">{STAGE_LABEL[s]}</span>
-                  <span className="tiny muted">{!ok && k !== 'same' ? 'Needs override access' : hint(k)}</span>
-                </button>
-              )
-            })}
+        <div className="stack lg">
+          <div className="cr-move">
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="eyebrow">Journey</span>
+              {STAGES.map((s, i) => option(s, <span className="cr-move-no num">{i + 1}</span>))}
+            </div>
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="eyebrow">Off the path</span>
+              {EXITS.map(x => option(x, <Icon name={x === 'nurture' ? 'clock' : x === 'dnc' ? 'shield' : x === 'under18' ? 'alert' : 'x'} size={15} />))}
+            </div>
           </div>
-          <div className="stack" style={{ gap: 4 }}>
-            <span className="eyebrow">Off the path</span>
-            {EXITS.map(x => {
-              const k = classify(episode, x)
-              const ok = allowed(k)
-              return (
-                <button key={x} type="button" className={`cr-move-opt ${target === x ? 'is-active' : ''} ${k === 'same' ? 'is-current' : ''}`} disabled={!ok} aria-pressed={target === x} onClick={() => setTarget(x)}>
-                  <Icon name={x === 'nurture' ? 'clock' : x === 'dnc' ? 'shield' : x === 'under18' ? 'alert' : 'x'} size={15} />
-                  <span className="grow">{EXIT_LABEL[x]}</span>
-                  <span className="tiny muted">{hint(k)}</span>
-                </button>
-              )
-            })}
-          </div>
+          {anyLocked && (
+            <p className="tiny muted">
+              <Icon name="shield" size={12} /> Skipping stages, moving back and bringing people back from a protective exit are overrides.
+              {overriders.length ? ` Ask ${overriders.map(u => `${u.name} (${ROLE_LABEL[u.role]})`).join(' or ')}.` : ' Ask a manager or the owner.'}
+            </p>
+          )}
         </div>
       </Modal>
       <ReasonDialog open={!!reasonFor} onClose={() => setReasonFor(undefined)} title={reasonFor ? titles[reasonFor.kind] : ''} body={reasonFor ? bodies[reasonFor.kind] : undefined}
         tone={reasonFor?.kind === 'exit' && reasonFor.to !== 'nurture' ? 'danger' : 'primary'} confirmLabel={reasonFor ? `Move to ${label(reasonFor.to)}` : 'Move'}
-        placeholder={reasonFor?.kind === 'exit' ? 'e.g. Chose a clinic closer to home' : reasonFor?.kind === 'skip' ? 'e.g. Booked directly at reception, no call needed' : 'e.g. Consultation was cancelled and needs rebooking'}
+        placeholder={reasonFor?.kind === 'exit' ? 'e.g. Chose a clinic closer to home' : reasonFor?.kind === 'skip' ? 'e.g. Booked directly at reception, no call needed' : reasonFor?.kind === 'return' ? 'e.g. Messaged again asking to book for October' : 'e.g. Consultation was cancelled and needs rebooking'}
         onConfirm={apply} />
     </>
   )

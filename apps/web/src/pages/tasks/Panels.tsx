@@ -237,7 +237,7 @@ export function FinishTask({ task, client, conversation, canAct, blockedReason }
   } else if (task.type === 'review') {
     const text = reviewRequestText(client, org)
     const win = conversation ? replyWindow(conversation) : undefined
-    const canSend = !!conversation && can('chats.reply') && !!win?.open
+    const canSend = !!conversation && can('chats.reply') && !client.doNotContact && !!win?.open
     helper = (
       <div className="stack">
         <blockquote className="tk-template">{text}</blockquote>
@@ -249,12 +249,14 @@ export function FinishTask({ task, client, conversation, canAct, blockedReason }
         </div>
       </div>
     )
+  } else if (client.doNotContact) {
+    helper = <p className="small muted">{first} asked us not to contact them, so no calls or messages go out. Close this task with a short note.</p>
   } else if (task.type === 'follow_up') {
     helper = <p className="small muted">Sorted without a call, for example they replied by DM or paid online? Mark it done with a short note.</p>
   }
 
   return (
-    <Card title={task.type === 'follow_up' ? 'Close without a call' : `Finish this ${TYPE_META[task.type].label.toLowerCase()}`}>
+    <Card title={isCallType(task.type) ? 'Close without a call' : `Finish this ${TYPE_META[task.type].label.toLowerCase()}`}>
       <div className="stack lg">
         {helper}
         <Field label={task.type === 'clinical_review' ? 'What did you advise?' : 'Outcome note (optional)'} hint={task.type === 'clinical_review' ? 'Required, so the next person to speak to them knows what was said.' : undefined}>

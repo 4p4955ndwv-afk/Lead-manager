@@ -1,6 +1,7 @@
 // Right-hand pane (full screen on phones): who to call, why, the call itself, and what happened before.
 import type { Task } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
+import { canOpen } from '../../lib/permissions'
 import { activeEpisode, byId, userName, useStore } from '../../lib/store'
 import { ago, useNow } from '../../lib/time'
 import { Avatar, Button, ChannelBadge, Chip, EmptyState, Field, StageBadge, UserAvatar } from '../../components/ui'
@@ -88,7 +89,7 @@ export function TaskDetail({ task, onBack, next, phoneShown, onReveal, doneAt }:
             </span>
           </div>
           <div className="row wrap">
-            {last?.outcome === 'booked' && <Button size="sm" variant="secondary" icon="calendar" onClick={() => actions.go('calendar')}>Open calendar</Button>}
+            {last?.outcome === 'booked' && canOpen(me, 'calendar') && <Button size="sm" variant="secondary" icon="calendar" onClick={() => actions.go('calendar')}>Open calendar</Button>}
             {next && <Button size="sm" variant="primary" iconRight="arrowRight" onClick={() => actions.go('tasks', next.id)}>Next: {firstName(byId(state.clients, next.clientId)?.name)}</Button>}
           </div>
         </div>
@@ -99,7 +100,7 @@ export function TaskDetail({ task, onBack, next, phoneShown, onReveal, doneAt }:
       {open && callType && (
         <CallFlow task={task} client={client} episode={episode} conversation={conversation} phoneShown={phoneShown} onReveal={reveal} canAct={canAct} blockedReason={blockedReason} />
       )}
-      {open && (!callType || task.type === 'follow_up') && (
+      {open && (!callType || task.type === 'follow_up' || client.doNotContact) && (
         <FinishTask task={task} client={client} conversation={conversation} canAct={open && (mine || manager)} blockedReason={!(mine || manager) ? blockedReason : undefined} />
       )}
 

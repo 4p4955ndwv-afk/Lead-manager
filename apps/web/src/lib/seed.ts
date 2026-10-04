@@ -7,7 +7,7 @@ import type {
 import { STAGES } from './types'
 import { DAY, HOUR, MIN, iso, startOfDay, uid } from './time'
 
-export const SEED_VERSION = 4
+export const SEED_VERSION = 5
 
 // deterministic pseudo-random so the demo looks the same on every reset
 function rng(seedNum: number) {
@@ -254,12 +254,13 @@ export function seed(): DemoState {
 
   for (const s of SPECS) {
     const created = s.createdDaysAgo === 0 ? agoM((s.lines?.[0]?.[2] ?? 30) + 1) : agoD(s.createdDaysAgo)
+    const clientSince = s.previousEpisode ? agoD(760) : created
     clients.push({
       id: s.id, name: s.name, handles: s.channel === 'tiktok' ? { tiktok: '@' + s.handle } : { instagram: '@' + s.handle }, phone: s.phone,
       email: s.stage === 'treatment' || s.stage === 'aftercare' ? `${s.handle.replace(/[^a-z]/gi, '')}@example.com` : undefined,
       language: s.language ?? 'en', ageVerified: STAGES.indexOf(s.stage) >= STAGES.indexOf('consultation'), tags: s.tags ?? [],
       consent: consent(true, true, s.stage === 'alumni' || s.stage === 'aftercare'), doNotContact: false, ownerId: s.owner, branchId: s.branch ?? 'b1',
-      source: { channel: s.channel, detail: s.source }, createdAt: created, score: s.score,
+      source: { channel: s.channel, detail: s.source }, createdAt: clientSince, score: s.score,
     })
     let epNo = 1
     if (s.previousEpisode) {
@@ -276,7 +277,7 @@ export function seed(): DemoState {
       interests: s.interests, value: s.value ?? PROCEDURES.find(p => p.id === s.interests[0])!.price,
       history: path.map((st, i) => ({ at: iso(Date.parse(created) + (i / Math.max(path.length, 1)) * span * DAY), from: i ? path[i - 1] : undefined, to: st, by: i < 2 ? 'ai' : st === 'contact' ? 'ai' : s.owner ?? 'u_co1' })),
     }
-    if (s.exit) ep.history.push({ at: agoD(Math.max(0, s.createdDaysAgo - 1)), from: s.stage, to: s.exit, by: s.exit === 'under18' ? 'ai' : s.owner ?? 'u_co1', reason: s.exitReason })
+    if (s.exit) ep.history.push({ at: iso(Math.min(Date.now() - HOUR, Date.parse(ep.history[ep.history.length - 1].at) + DAY)), from: s.stage, to: s.exit, by: s.exit === 'under18' ? 'ai' : s.owner ?? 'u_co1', reason: s.exitReason })
     episodes.push(ep)
 
     if (s.lines) {
@@ -290,7 +291,7 @@ export function seed(): DemoState {
         lastInboundAt: lastIn?.at ?? created, lastMessageAt: msgs[msgs.length - 1].at, unread: msgs[msgs.length - 1].author === 'client' ? 1 : 0,
         outboundSinceInbound: msgs.slice(lastOutIdx + 1).filter(m => m.author === 'ai' || m.author === 'human').length, messages: msgs,
       }
-      if (s.draft) conv.draft = { text: s.draft, confidence: 0.86, intent: 'price', reasons: ['Price range taken from the approved price list.', 'Steers toward a call, as the playbook recommends after a price question.'], createdAt: agoM(5) }
+      if (s.draft) conv.draft = { text: s.draft, confidence: 0.86, intent: s.draft.includes('£') ? 'price' : 'info', reasons: ['Price range taken from the approved price list.', 'Steers toward a call, as the playbook recommends after a price question.'], createdAt: agoM(5) }
       conversations.push(conv)
     }
   }
@@ -326,7 +327,7 @@ export function seed(): DemoState {
       interests: [proc.id], value: proc.price,
       history: path.map((st, k) => ({ at: iso(Date.parse(created) + (k / path.length) * daysAgo * DAY), from: k ? path[k - 1] : undefined, to: st, by: k < 3 ? 'ai' : owner })),
     }
-    if (exit) ep.history.push({ at: agoD(Math.max(0, daysAgo - 2)), from: stage, to: exit, by: exit === 'spam' ? 'ai' : owner, reason: ep.exitReason })
+    if (exit) ep.history.push({ at: iso(Math.min(Date.now() - HOUR, Date.parse(ep.history[ep.history.length - 1].at) + DAY)), from: stage, to: exit, by: exit === 'spam' ? 'ai' : owner, reason: ep.exitReason })
     if (stage === 'alumni') ep.endedAt = ep.history[ep.history.length - 1].at
     episodes.push(ep)
     if (stage === 'treatment' || stage === 'aftercare' || stage === 'alumni') {
@@ -342,7 +343,7 @@ export function seed(): DemoState {
   tasks.push(
     { id: 'tk_omar', type: 'call', title: 'Call Omar Siddiqui to book a consultation', clientId: 'cl_omar', episodeId: 'ep_omar', assignedTo: 'u_co1', createdAt: agoM(9), dueAt: iso(now() + 6 * MIN), slaMinutes: 15, escalationLevel: 0, status: 'open', attempts: [], priority: 'urgent', brief: brief('Interested in Hair transplant (FUE) and PRP scalp therapy. Hairline receding for about 2 years. Prefers calls after 6pm. Goal: agree a consultation date and when the deposit is due.') },
     { id: 'tk_sofia', type: 'call', title: 'Call Sofía Herrera to book a consultation', clientId: 'cl_sofia', episodeId: 'ep_sofia', assignedTo: 'u_co1', createdAt: agoM(33), dueAt: agoM(18), slaMinutes: 15, escalationLevel: 1, status: 'open', attempts: [], priority: 'urgent', brief: brief('Interested in a chemical peel course. Asked about price and was given the £300–£600 range. Speaks Spanish; a Spanish-speaking colleague is a plus. Goal: agree a consultation date and when the deposit is due.') },
-    { id: 'tk_ryan', type: 'callback', title: 'Call Ryan Walsh back (asked for Thursday morning)', clientId: 'cl_ryan', episodeId: 'ep_ryan', assignedTo: 'u_co2', createdAt: agoD(1), dueAt: at(1, 10, 0), escalationLevel: 0, status: 'open', attempts: [{ at: agoD(1, -1), by: 'u_co2', outcome: 'no_answer' }, { at: agoD(0, 20), by: 'u_co2', outcome: 'call_back', note: 'Busy at work, call Thursday morning' }], priority: 'normal', brief: 'Interested in PRP scalp therapy (4 sessions). Asked how many sessions are typical. Goal: book a free consultation.' },
+    { id: 'tk_ryan', type: 'callback', title: 'Call Ryan Walsh back (asked for tomorrow morning)', clientId: 'cl_ryan', episodeId: 'ep_ryan', assignedTo: 'u_co2', createdAt: agoD(1), dueAt: at(1, 10, 0), escalationLevel: 0, status: 'open', attempts: [{ at: agoD(1, -1), by: 'u_co2', outcome: 'no_answer' }, { at: agoD(0, 20), by: 'u_co2', outcome: 'call_back', note: 'Busy at work, call tomorrow morning' }], priority: 'normal', brief: 'Interested in PRP scalp therapy (4 sessions). Asked how many sessions are typical. Goal: book a free consultation.' },
     { id: 'tk_jade', type: 'clinical_review', title: 'Clinical question from Jade Okafor (pregnancy)', clientId: 'cl_jade', episodeId: 'ep_jade', assignedTo: 'u_cl1', createdAt: agoM(21), dueAt: iso(now() + 3 * HOUR), escalationLevel: 0, status: 'open', attempts: [], priority: 'high', brief: 'Asked whether laser is safe at 5 months pregnant. The AI gave no advice and asked for a number for a clinician call.' },
     { id: 'tk_chloe', type: 'follow_up', title: 'Follow up on Chloe Martin\'s treatment plan', clientId: 'cl_chloe', episodeId: 'ep_chloe', assignedTo: 'u_co1', createdAt: agoD(2), dueAt: at(0, 16, 30), escalationLevel: 0, status: 'open', attempts: [], priority: 'normal', brief: 'Plan proposed: chemical peel course + skin booster course (£1,200 total). Said she would think about instalments.' },
     { id: 'tk_noah_pay', type: 'payment', title: 'Instalment 2 overdue: Noah Bennett', clientId: 'cl_noah', episodeId: 'ep_noah', assignedTo: 'u_fin', createdAt: agoD(3), dueAt: agoD(1), escalationLevel: 0, status: 'open', attempts: [], priority: 'high' },

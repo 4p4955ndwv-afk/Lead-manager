@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { AiMode, Conversation } from '../../lib/types'
 import { CHANNEL_LABEL, ROLE_LABEL } from '../../lib/types'
 import { activeEpisode, byId, useStore, userName } from '../../lib/store'
@@ -57,6 +57,12 @@ export function Thread({ conv, isPhone, onBack, onOpenDetails, onMarkedUnread }:
     requestAnimationFrame(() => inputRef.current?.focus())
   }, [setText])
 
+  // a new client message (or a colleague) can replace the draft mid-edit: keep the text as a normal reply
+  const hasDraft = !!conv.draft
+  useEffect(() => {
+    if (editingDraft && !hasDraft) setEditingDraft(false)
+  }, [editingDraft, hasDraft])
+
   if (!client) return null
   const first = firstName(client.name)
   const handle = client.handles[conv.channel as 'instagram' | 'tiktok'] ?? (conv.channel === 'whatsapp' ? maskPhone(client.phone, can('clients.view_phone')) : client.handles.instagram ?? client.handles.tiktok ?? '')
@@ -87,7 +93,7 @@ export function Thread({ conv, isPhone, onBack, onOpenDetails, onMarkedUnread }:
   const tagReply = conv.channel === 'instagram' && !win.open && !!win.humanAgentOpen
   let block: ComposerBlock | null = null
   if (client.doNotContact) {
-    block = { title: `${first} asked us to stop messaging`, body: 'Replies are blocked on every channel. If they message again, the chat reopens for a person to review.' }
+    block = { title: `${first} asked us to stop messaging`, body: `Replies are blocked on every channel. If ${first} asks to hear from us again, use Move stage in the lead details to bring them back; it asks for a reason.` }
   } else if (heldByOther) {
     block = { title: `${holder} is replying in this chat`, body: 'Take over to reply. Taking over a colleague’s chat asks for a reason, which goes in the audit log.', action: <Button size="sm" variant="secondary" icon="hand" onClick={() => setPendingHandling('human')}>Take over</Button> }
   } else if (!win.open) {
@@ -294,7 +300,7 @@ export function Thread({ conv, isPhone, onBack, onOpenDetails, onMarkedUnread }:
           block={block}
           placeholder={placeholder}
           onSend={send}
-          onDraft={!conv.draft && conv.handling !== 'paused' && !heldByOther ? draftReply : undefined}
+          onDraft={!conv.draft && conv.handling !== 'paused' && !heldByOther && !state.ai.killSwitch ? draftReply : undefined}
           drafting={drafting}
           humanAgent={tagReply && humanAgent}
         />
@@ -382,7 +388,7 @@ function WindowBar({ conv, win, now, humanAgent, onHumanAgent, canReply, first, 
     return (
       <div className={`ib-window is-${n <= 2 ? 'warn' : tone}`} title="TikTok allows up to 10 messages within 48 hours of each client message.">
         <Icon name="clock" size={15} />
-        <span>48h window · <b className="mono num">{left}</b> left · <b className="num">{n} of 10</b> messages left</span>
+        <span><span className="ib-nowrap">48h window · <b className="mono num">{left}</b> left</span> · <span className="ib-nowrap"><b className="num">{n} of 10</b> messages left</span></span>
         {mode}
       </div>
     )

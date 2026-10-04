@@ -1,5 +1,6 @@
 // Unified DM inbox: conversation list | thread | lead context. One pane at a time on phones.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import type { Conversation } from '../lib/types'
 import { useStore } from '../lib/store'
 import { useNow } from '../lib/time'
 import { Button, Drawer, EmptyState } from '../components/ui'
@@ -80,19 +81,33 @@ export default function Inbox() {
     return out
   }, [visible, channel, now])
 
-  const items = useMemo(() => {
-    const s = q.trim().toLowerCase()
+  const matchesSearch = (c: Conversation, query: string) => {
+    const s = query.trim().toLowerCase()
+    if (!s) return true
+    const client = state.clients.find(x => x.id === c.clientId)
+    if (client?.name.toLowerCase().includes(s)) return true
+    if (Object.values(client?.handles ?? {}).some(h => h?.toLowerCase().includes(s))) return true
     const showPhone = can('clients.view_phone')
-    return sortConversations(visible.filter(c => {
-      if (channel !== 'all' && c.channel !== channel) return false
-      if (!inTab(c, tab, now)) return false
-      if (!s) return true
-      const client = state.clients.find(x => x.id === c.clientId)
-      if (client?.name.toLowerCase().includes(s)) return true
-      if (Object.values(client?.handles ?? {}).some(h => h?.toLowerCase().includes(s))) return true
-      return c.messages.some(m => maskPhonesInText(m.text, showPhone).toLowerCase().includes(s))
-    }))
-  }, [visible, channel, tab, now, q, state.clients, can])
+    return c.messages.some(m => maskPhonesInText(m.text, showPhone).toLowerCase().includes(s))
+  }
+
+  const items = useMemo(() => sortConversations(visible.filter(c => {
+    if (channel !== 'all' && c.channel !== channel) return false
+    if (!inTab(c, tab, now)) return false
+    return matchesSearch(c, q)
+  })),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [visible, channel, tab, now, q, state.clients, can])
+
+  // following a link (notification, toast, task) to a chat outside the current tab or filters shows it in the list
+  useEffect(() => {
+    const c = route.id ? visible.find(x => x.id === route.id) : undefined
+    if (!c) return
+    if (!inTab(c, tab, Date.now())) setTab('all')
+    if (channel !== 'all' && c.channel !== channel) setChannel('all')
+    if (!matchesSearch(c, q)) setQ('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.id])
 
   // desktop shows the first chat in the list when none is picked; phones show the list
   const selectedId = route.id ?? (!isPhone ? items[0]?.id : undefined)

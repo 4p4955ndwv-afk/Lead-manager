@@ -4,7 +4,7 @@ import { byId, userName, useStore } from '../../lib/store'
 import { ago, ms, sameDay, shortDate, timeOf, until } from '../../lib/time'
 import { ChannelBadge, Chip, Countdown, UserAvatar } from '../../components/ui'
 import { Icon } from '../../components/icons'
-import { OUTCOME_META, PRIORITY_META, TYPE_META, escalatedTo } from './helpers'
+import { OUTCOME_META, PRIORITY_META, TYPE_META, escalatedTo, isEscalated } from './helpers'
 
 export interface TaskGroup { id: string; label: string; tasks: Task[]; tone?: 'danger' | 'warn' }
 
@@ -52,8 +52,8 @@ export function DueLabel({ task, now, compact }: { task: Task; now: number; comp
 
 export function EscalationChip({ task }: { task: Task }) {
   const { me } = useStore()
-  if (task.status !== 'open' || task.escalationLevel === 0) return null
-  if (escalatedTo(me, task)) {
+  if (!isEscalated(task)) return null
+  if (escalatedTo(me, task) && !(me.role === 'manager' && task.escalationLevel === 2)) {
     return <Chip tone={task.escalationLevel === 1 ? 'warn' : 'danger'} icon="flag" title={`Not called in time; escalated to you (${task.escalationLevel === 1 ? 'manager' : 'owner'})`}>Escalated to you</Chip>
   }
   return task.escalationLevel === 1

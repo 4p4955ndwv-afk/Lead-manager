@@ -104,7 +104,9 @@ export function ConversationList({ items, counts, tab, onTab, q, onQ, channel, o
                       {client?.doNotContact && <Chip tone="danger" icon="x">Do not contact</Chip>}
                       {reason && <Chip tone={reasonTone(reason)} icon={reasonIcon(reason)}>{reason}</Chip>}
                       {c.draft && <Chip tone="accent" icon="edit">Draft ready</Chip>}
-                      {c.handling === 'ai' && <Chip tone="accent" icon="sparkles">AI handling</Chip>}
+                      {c.handling === 'ai' && (state.ai.killSwitch
+                        ? (!reason || !/kill switch/i.test(reason)) && <Chip icon="pause" title="AI replies are paused for everyone">AI paused</Chip>
+                        : <Chip tone="accent" icon="sparkles">AI handling</Chip>)}
                       {holder && <Chip tone="team" icon="hand">{holder}</Chip>}
                       {c.handling === 'paused' && <Chip icon="pause">Paused</Chip>}
                       {closing && <span className="ib-item-window" title="Reply window closes in"><Countdown deadline={win.closesAt} compact /></span>}

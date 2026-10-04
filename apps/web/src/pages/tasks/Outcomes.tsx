@@ -21,8 +21,8 @@ export function NoAnswerModal({ open, onClose, task, client, callNote }: Common)
   const tryNo = Math.min(3, missed + 1)
   const sender = state.users.find(u => u.id === task.assignedTo) ?? me
   const tpl = missedCallTemplate(client, sender.name, state.settings.orgName)
-  const viaWhatsApp = client.consent.whatsapp
-  const viaSms = !viaWhatsApp && client.consent.sms
+  const viaWhatsApp = client.consent.whatsapp && !client.doNotContact
+  const viaSms = !viaWhatsApp && client.consent.sms && !client.doNotContact
   const first = firstName(client.name)
 
   const steps = [
@@ -222,7 +222,7 @@ export function WrongNumberDialog({ open, onClose, task, client, callNote, conve
   const [askInDm, setAskInDm] = useState(true)
   useEffect(() => { if (open) setAskInDm(true) }, [open])
   const win = conversation ? replyWindow(conversation) : undefined
-  const canDm = !!conversation && can('chats.reply') && !!win && (win.open || !!win.humanAgentOpen)
+  const canDm = !!conversation && can('chats.reply') && !client.doNotContact && !!win && (win.open || !!win.humanAgentOpen)
   const first = firstName(client.name)
   const dmText = `Hi ${first}, we tried to call you but the number didn't reach you. Could you double-check it and send it again? Thank you!`
   return (

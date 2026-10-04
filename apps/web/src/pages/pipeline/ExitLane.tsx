@@ -9,7 +9,7 @@ import { Icon } from '../../components/icons'
 import { useStore, userName } from '../../lib/store'
 import { MoveMenu } from './MoveMenu'
 import { dropHint, type DragApi } from './Board'
-import { EXIT_HELP, moveRule, type Pos, type PRow } from './model'
+import { EXIT_HELP, isCardDrag, moveRule, type Pos, type PRow } from './model'
 
 interface Props {
   rows: PRow[]
@@ -32,7 +32,7 @@ export function ExitLane({ rows, tab, onTab, now, canMove, canOverride, drag, on
 
   const dropProps = (x: Exit) => canMove ? {
     onDragOver: (e: DragEvent<HTMLElement>) => {
-      if (!dragRow) return
+      if (!dragRow && !isCardDrag(e.dataTransfer)) return
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
       if (over !== x) setOver(x)
@@ -54,7 +54,7 @@ export function ExitLane({ rows, tab, onTab, now, canMove, canOverride, drag, on
           <h2 id="pl-exits-title" className="card-title">Off the path</h2>
           <p className="muted small">
             {off.length} {off.length === 1 ? 'person has' : 'people have'} left the main journey.
-            {canMove ? ' Drag a card onto a tab to move someone here, or bring someone back when things change.' : ''}
+            {canMove ? ' Drag a card onto a tab or use its ⋯ menu to move someone here, and bring them back when things change.' : ''}
           </p>
         </div>
       </div>

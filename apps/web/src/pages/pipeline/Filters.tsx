@@ -42,7 +42,7 @@ export function FilterBar({ filters, onChange, ownerIds, channels, shown, total 
       <div id={id + 'panel'} className={`pl-filters ${open ? 'is-open' : ''}`}>
         <div className="pl-filter">
           <label htmlFor={id + 'owner'} className="sr-only">Owner</label>
-          <select id={id + 'owner'} className="input pl-select" value={filters.owner} onChange={e => set('owner', e.target.value)}>
+          <select id={id + 'owner'} className="input pl-select" value={filters.owner === me.id ? 'me' : filters.owner} onChange={e => set('owner', e.target.value)}>
             <option value="all">All owners</option>
             <option value="me">My clients</option>
             <option value="none">No owner yet</option>

@@ -7,6 +7,7 @@ import type { PageId } from '../lib/types'
 import { ROLE_LABEL } from '../lib/types'
 import { ago } from '../lib/time'
 import { visibleConversations } from '../pages/inbox/helpers'
+import { inMine } from '../pages/tasks/helpers'
 import '../styles/shell.css'
 
 export const NAV: { id: PageId; label: string; icon: IconName; mobile?: boolean }[] = [
@@ -47,7 +48,7 @@ export function Shell({ children, onOpenClaude }: { children: ReactNode; onOpenC
   const nav = NAV.filter(n => canOpen(me, n.id))
   const unread = state.notifications.filter(n => n.userId === me.id && !n.read).length
   const inboxCount = visibleConversations(state, me).filter(c => c.needsHuman || c.draft).length
-  const myOpenTasks = state.tasks.filter(t => t.status === 'open' && t.assignedTo === me.id).length
+  const myOpenTasks = state.tasks.filter(t => t.status === 'open' && inMine(me, t)).length
   const counts: Partial<Record<PageId, number>> = { inbox: inboxCount, tasks: myOpenTasks }
 
   useEffect(() => {
@@ -65,8 +66,12 @@ export function Shell({ children, onOpenClaude }: { children: ReactNode; onOpenC
     return () => window.removeEventListener('keydown', h)
   }, [])
 
-  const igMode = state.ai.mode.instagram
-  const aiPill = state.ai.killSwitch ? { tone: 'danger' as const, text: 'AI paused' } : { tone: 'ok' as const, text: `AI ${igMode === 'autopilot' ? 'autopilot' : igMode === 'copilot' ? 'co-pilot' : 'shadow'}` }
+  const modeName = (m: string) => (m === 'autopilot' ? 'autopilot' : m === 'copilot' ? 'co-pilot' : 'shadow')
+  const modes = state.ai.mode
+  const allSame = modes.instagram === modes.tiktok && modes.tiktok === modes.whatsapp
+  const aiPill = state.ai.killSwitch
+    ? { tone: 'danger' as const, text: 'AI paused', title: 'All AI replies are paused' }
+    : { tone: 'ok' as const, text: allSame ? `AI ${modeName(modes.instagram)}` : 'AI replying', title: `Instagram ${modeName(modes.instagram)} · TikTok ${modeName(modes.tiktok)} · WhatsApp ${modeName(modes.whatsapp)}` }
 
   return (
     <div className="shell">
@@ -115,7 +120,7 @@ export function Shell({ children, onOpenClaude }: { children: ReactNode; onOpenC
             <kbd className="mono">⌘K</kbd>
           </button>
           <div className="topbar-actions">
-            <button type="button" className={`ai-pill ai-pill-${aiPill.tone}`} onClick={() => actions.go(canOpen(me, 'ai') ? 'ai' : 'inbox')} title="AI reply status">
+            <button type="button" className={`ai-pill ai-pill-${aiPill.tone}`} onClick={() => actions.go(canOpen(me, 'ai') ? 'ai' : 'inbox')} title={aiPill.title}>
               <span className="dot" />{aiPill.text}
             </button>
             <Button variant="ghost" size="sm" icon="play" onClick={() => setDemoOpen(true)} className="hide-sm">Demo</Button>

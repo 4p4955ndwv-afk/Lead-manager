@@ -6,6 +6,10 @@ import { DAY, ms } from '../../lib/time'
 
 export type Pos = Stage | Exit
 
+/** dataTransfer type for a dragged card; drop targets also accept it before React has re-rendered with the dragged row. */
+export const DRAG_TYPE = 'application/x-lm-episode'
+export const isCardDrag = (dt: DataTransfer | null) => !!dt && Array.from(dt.types).includes(DRAG_TYPE)
+
 export const isStage = (p: Pos | undefined): p is Stage => !!p && (STAGES as string[]).includes(p)
 export const isExit = (p: Pos | undefined): p is Exit => !!p && (EXITS as string[]).includes(p)
 export const posLabel = (p: Pos) => (isStage(p) ? STAGE_LABEL[p] : EXIT_LABEL[p])
@@ -93,7 +97,8 @@ export function activeFilterCount(f: Filters): number {
 
 export function applyFilters(rows: PRow[], f: Filters, meId: string, canPhone: boolean): PRow[] {
   const q = f.q.trim().toLowerCase()
-  const digits = q.replace(/\D/g, '')
+  // a UK number typed locally (07700 …) is stored as +44 7700 …, so drop the trunk 0 before matching
+  const digits = q.replace(/\D/g, '').replace(/^0+/, '')
   return rows.filter(r => {
     if (f.owner === 'me' && r.ownerId !== meId) return false
     if (f.owner === 'none' && r.ownerId) return false
@@ -196,7 +201,8 @@ export const PROTECTIVE_EXITS: Exit[] = ['not_suitable', 'dnc', 'spam', 'under18
 export type MoveKind = 'same' | 'next' | 'skip' | 'back' | 'exit' | 'return'
 export interface MoveRule { kind: MoveKind; needsReason: boolean; needsOverride: boolean; steps: number }
 
-export function moveRule(row: PRow, to: Pos): MoveRule {
+/** The rule for moving an episode from where it sits now to `to`. Shared by the board and the client record. */
+export function moveRule(row: { pos: Pos; ep: Episode }, to: Pos): MoveRule {
   const from = row.pos
   if (from === to) return { kind: 'same', needsReason: false, needsOverride: false, steps: 0 }
   if (isExit(to)) {

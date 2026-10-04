@@ -212,6 +212,14 @@ export function MoveStageDialog({ open, onClose, episodeId }: { open: boolean; o
           if (!pending) return
           const override = pending.kind === 'skip' || pending.kind === 'back'
           actions.moveStage(ep.id, pending.to, { reason, override })
+          // keep the client's do-not-contact flag in step with the episode, as the pipeline board does
+          const toStage = (STAGES as string[]).includes(pending.to)
+          if (pending.to === 'dnc' && !client.doNotContact) {
+            actions.update(d => { const c = d.clients.find(x => x.id === client.id); if (c) c.doNotContact = true })
+          } else if (toStage && ep.exit === 'dnc' && client.doNotContact) {
+            actions.update(d => { const c = d.clients.find(x => x.id === client.id); if (c) c.doNotContact = false })
+            actions.audit({ action: 'client.dnc_cleared', target: { type: 'client', id: client.id, label: client.name }, detail: 'Do-not-contact switched off when brought back to the journey', reason })
+          }
           actions.toast(`${first} moved to ${label(pending.to)}.${override ? ' Override logged.' : ''}`, 'success')
         }}
       />

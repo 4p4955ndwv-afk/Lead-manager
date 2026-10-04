@@ -69,7 +69,7 @@ export function AppointmentsTab({ client, episode }: { client: Client; episode?:
           <span className="small muted">
             <span className="num">{d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} {timeOf(a.start)}–{timeOf(a.end)}</span>
             {' · '}{userName(state, a.practitionerId)} · {state.rooms.find(r => r.id === a.roomId)?.name} · {state.branches.find(b => b.id === a.branchId)?.name}
-            {!FINAL.includes(a.status) && !started ? ` · ${until(a.start, now)}` : ''}
+            {!FINAL.includes(a.status) && a.status !== 'arrived' && !started ? ` · ${until(a.start, now)}` : ''}
           </span>
           {a.notes && a.type !== 'follow_up' && <span className="tiny muted">“{a.notes}”</span>}
           {!FINAL.includes(a.status) && (a.reminders.d2 || a.reminders.d1 || a.reminders.confirmedVia) && (

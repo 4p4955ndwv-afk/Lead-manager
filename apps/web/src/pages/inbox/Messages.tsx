@@ -93,13 +93,15 @@ function MessageRow({ m, showPhone, meId, nameOf, onUseShadow }: { m: Message; s
     )
   }
   if (m.author === 'client') {
+    // "call me on 07700…" shares a number; it is not a request for ours
+    const flags = (m.flags ?? []).filter(f => !(f === 'asked_number' && m.flags?.includes('phone_detected')))
     return (
       <div className="ib-msg ib-msg-in">
         <div className="ib-bubble" dir="auto">{text}</div>
         <div className="ib-meta"><span className="num">{timeOf(m.at)}</span></div>
-        {m.flags && m.flags.length > 0 && (
+        {flags.length > 0 && (
           <div className="ib-flags">
-            {m.flags.map(f => <Chip key={f} tone={FLAG_META[f].tone} icon={FLAG_META[f].icon}>{FLAG_META[f].label}</Chip>)}
+            {flags.map(f => <Chip key={f} tone={FLAG_META[f].tone} icon={FLAG_META[f].icon}>{FLAG_META[f].label}</Chip>)}
           </div>
         )}
       </div>

@@ -9,7 +9,8 @@ import { Avatar, Button, ChannelBadge, Chip, IconButton, StageBadge } from '../.
 import { Icon } from '../../components/icons'
 import { Menu, type MenuItem } from './Menu'
 import { EditClientModal, EraseFlow, LogCallModal, MergeModal, MoveStageFlow, first } from './dialogs'
-import { auditFor, dayYear, handleUrl, handlesOf, langLabel, scoreTone, slug } from './helpers'
+import { auditFor, bookingBlock, channelPhrase, dayYear, handleUrl, handlesOf, langLabel, scoreTone, slug } from './helpers'
+import { saveFile } from '../../lib/download'
 
 export function Header({ client, episode, latest }: { client: Client; episode?: Episode; latest?: Episode }) {
   const { state, me, can, actions } = useStore()
@@ -22,6 +23,8 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
   const owner = state.users.find(u => u.id === client.ownerId)
   const branch = state.branches.find(b => b.id === client.branchId)
   const hs = handlesOf(client)
+  // a returning client's first contact is the start of their first episode, even if the profile was created later
+  const firstContact = state.episodes.filter(e => e.clientId === client.id).reduce((t, e) => (ms(e.startedAt) < ms(t) ? e.startedAt : t), client.createdAt)
 
   const logView = (how: string) => {
     if (revealed) return
@@ -37,16 +40,7 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
       plans: pick(state.plans), payments: pick(state.payments), notes: pick(state.notes), documents: pick(state.documents), auditTrail: auditFor(state, client.id),
     }
     const file = `northlight-export-${slug(client.name)}.json`
-    try {
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = file
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 4000)
-    } catch { /* downloads can be blocked in previews; the export is still logged */ }
+    void saveFile(file, JSON.stringify(data, null, 2), 'application/json')
     actions.audit({ action: 'client.export', target: { type: 'client', id: client.id, label: client.name }, detail: `Personal data export prepared (${file})` })
     actions.toast(`Export prepared: ${file}. Logged in the audit trail.`, 'success')
   }
@@ -84,7 +78,7 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
                 <Icon name={h.channel} size={13} />{h.handle}
               </a>
             ))}
-            {!hs.length && <Chip icon={client.source.channel === 'whatsapp' ? 'whatsapp' : client.source.channel === 'phone' ? 'phone' : 'user'}>No social handle · came in via {CHANNEL_LABEL[client.source.channel].toLowerCase()}</Chip>}
+            {!hs.length && <Chip icon={client.source.channel === 'whatsapp' ? 'whatsapp' : client.source.channel === 'phone' ? 'phone' : 'user'}>No social handle · came in via {channelPhrase(client.source.channel)}</Chip>}
             {client.mergedFrom?.length ? <Chip tone="team" icon="merge" title={client.mergedFrom.join(', ')}>Merged from {client.mergedFrom.length} record{client.mergedFrom.length > 1 ? 's' : ''}</Chip> : null}
           </div>
         </div>
@@ -124,7 +118,7 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
         <div className="cr-fact"><dt>Owner</dt><dd>{owner ? <span className="row" style={{ gap: 6 }}><Avatar name={owner.name} color={owner.color} size={20} /><span className="truncate">{owner.name}{owner.id === me.id ? ' (you)' : ''}</span></span> : <span className="faint">Unassigned</span>}</dd></div>
         <div className="cr-fact"><dt>Branch</dt><dd>{branch ? `${branch.name}, ${branch.city}` : '—'}</dd></div>
         <div className="cr-fact cr-fact-wide"><dt>Came in via</dt><dd><span className="row" style={{ gap: 6 }}><ChannelBadge channel={client.source.channel} size="sm" label={false} /><span className="cr-fact-link" title={client.source.detail}>{client.source.detail}</span></span></dd></div>
-        <div className="cr-fact"><dt>First contact</dt><dd title={new Date(client.createdAt).toLocaleString()}>{dayYear(client.createdAt)}</dd></div>
+        <div className="cr-fact"><dt>First contact</dt><dd title={new Date(firstContact).toLocaleString()}>{dayYear(firstContact)}</dd></div>
         <div className="cr-fact"><dt>Age check</dt><dd>{client.ageVerified ? <span className="cr-ok row" style={{ gap: 4 }}><Icon name="check" size={14} />ID verified</span> : <span className="muted">At consultation</span>}{client.dateOfBirth && showPhone ? <span className="tiny muted"> · born {dayYear(client.dateOfBirth)}</span> : null}</dd></div>
       </dl>
 
@@ -139,22 +133,23 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
       </div>
 
       <div className="cr-head-actions">
-        {canCall ? (
+        {/* no number yet: nothing to call or log, so the chat (where they can share it) leads instead */}
+        {!client.phone ? null : canCall ? (
           <a className="btn btn-primary btn-md" href={`tel:${client.phone}`} onClick={() => logView('Called from the client record')}>
             <Icon name="phone" size={17} /><span>Call</span>
           </a>
         ) : (
-          <Button variant="primary" icon="phone" disabled title={client.doNotContact ? 'Do not contact is on' : !client.phone ? 'No number yet' : 'Your role cannot see phone numbers'}>
-            {client.doNotContact ? 'Do not contact' : !client.phone ? 'No number yet' : 'Call'}
+          <Button variant="primary" icon="phone" disabled title={client.doNotContact ? 'Do not contact is on' : 'Your role cannot see phone numbers'}>
+            {client.doNotContact ? 'Do not contact' : 'Call'}
           </Button>
         )}
-        {can('pipeline.move') && <Button icon="edit" onClick={() => setDialog('call')}>Log a call</Button>}
+        {can('pipeline.move') && client.phone && <Button icon="edit" onClick={() => setDialog('call')}>Log a call</Button>}
         {canOpen(me, 'inbox') && (
-          <Button icon="message" disabled={!conv} onClick={() => conv && actions.go('inbox', conv.id)} title={conv ? `Open the ${CHANNEL_LABEL[conv.channel]} chat` : 'No DM thread yet'}>
+          <Button variant={!client.phone && conv && !bookingBlock(client, latest) ? 'primary' : 'secondary'} icon="message" disabled={!conv} onClick={() => conv && actions.go('inbox', conv.id)} title={conv ? `Open the ${CHANNEL_LABEL[conv.channel]} chat` : 'No DM thread yet'}>
             {conv ? 'Message' : 'No DM thread'}
           </Button>
         )}
-        {episode && (can('pipeline.move') || can('pipeline.override')) && <Button icon="arrowRight" onClick={() => setDialog('move')}>Move stage</Button>}
+        {latest && can('pipeline.move') && <Button icon="arrowRight" onClick={() => setDialog('move')}>Move stage</Button>}
         {can('clients.edit') && <Button icon="settings" onClick={() => setDialog('edit')}>Edit details</Button>}
         <Menu label="More actions" items={more} />
       </div>
@@ -163,7 +158,8 @@ export function Header({ client, episode, latest }: { client: Client; episode?: 
       <EditClientModal open={dialog === 'edit'} onClose={close} client={client} />
       <MergeModal open={dialog === 'merge'} onClose={close} client={client} />
       <EraseFlow open={dialog === 'erase'} onClose={close} client={client} />
-      {episode && <MoveStageFlow open={dialog === 'move'} onClose={close} client={client} episode={episode} />}
+      {/* only the latest episode moves; earlier ones are history (the pipeline shows the latest too) */}
+      {latest && <MoveStageFlow open={dialog === 'move'} onClose={close} client={client} episode={latest} />}
     </section>
   )
 }

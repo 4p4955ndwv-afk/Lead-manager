@@ -2,7 +2,7 @@
 import type {
   Appointment, AppointmentStatus, AuditEntry, CallOutcome, Channel, Client, DemoState, Document, Episode, Payment, Stage, TreatmentPlan,
 } from '../../lib/types'
-import { STAGES } from '../../lib/types'
+import { CHANNEL_LABEL, STAGES } from '../../lib/types'
 import { ms } from '../../lib/time'
 import type { Tone } from '../../components/ui'
 import type { IconName } from '../../components/icons'
@@ -47,6 +47,8 @@ export function slug(name: string): string {
 /** Every record id that belongs to this person, so audit entries about them can be found. */
 export function relatedIds(s: DemoState, clientId: string): Set<string> {
   const ids = new Set<string>([clientId])
+  // records merged into this one keep their old client id in the audit log
+  s.clients.find(c => c.id === clientId)?.mergedFrom?.forEach(id => ids.add(id))
   s.episodes.forEach(e => e.clientId === clientId && ids.add(e.id))
   s.conversations.forEach(c => c.clientId === clientId && ids.add(c.id))
   s.tasks.forEach(t => t.clientId === clientId && ids.add(t.id))
@@ -114,6 +116,9 @@ export const DOC_KIND_LABEL: Record<Document['kind'], string> = {
 export const DOC_KIND_ICON: Record<Document['kind'], IconName> = {
   consent_form: 'shield', photo: 'image', quote: 'file', invoice: 'card', id_check: 'key',
 }
+
+/** Channel name for use mid-sentence: "came in via walk-in", but brand names keep their capitals ("via WhatsApp"). */
+export const channelPhrase = (ch: Channel) => (ch === 'phone' ? 'a phone call' : ch === 'walkin' || ch === 'referral' ? CHANNEL_LABEL[ch].toLowerCase() : CHANNEL_LABEL[ch])
 
 export const MANUAL_CHANNELS: { id: Extract<Channel, 'phone' | 'walkin' | 'referral' | 'whatsapp'>; label: string }[] = [
   { id: 'phone', label: 'Phone call' },

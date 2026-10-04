@@ -4,7 +4,7 @@ import type { AiDraft, Conversation, DemoState, Message } from './types'
 import type { SampleFn } from './claude'
 
 const PHONE_RE = /(\+?\d[\d\s().-]{7,}\d)/
-const ASKED_NUMBER_RE = /\b(your (phone|number|contact)|contact number|call me|can i call|phone number|whats ?app number|number to call)\b/i
+const ASKED_NUMBER_RE = /\b(your (phone|number|contact)|contact number|can i call|whats ?app number|number to call)\b/i
 const PRICE_RE = /\b(price|cost|how much|fees?|rate|charges?|expensive|cheap|deposit)\b/i
 const CLINICAL_RE = /\b(pregnan\w*|side effects?|allerg\w*|medication|medicine|infection|diabetes|blood thinners?|safe for me|scar\w*|pain(ful)?|eczema|keloid|breastfeeding)\b/i
 const MINOR_RE = /\b(i'?m|i am|im)\s*(1[0-7])\b|\b(1[0-7])\s*(yo|years? old)\b|\bin (year|grade) \d+\b|\bmy (mum|mom|parents?) (says|said|will)\b/i
@@ -18,7 +18,7 @@ export type Flag = NonNullable<Message['flags']>[number]
 export function detectFlags(text: string): Flag[] {
   const f: Flag[] = []
   if (PHONE_RE.test(text) && (text.match(/\d/g) || []).length >= 9) f.push('phone_detected')
-  if (ASKED_NUMBER_RE.test(text)) f.push('asked_number')
+  if (ASKED_NUMBER_RE.test(text) && !f.includes('phone_detected')) f.push('asked_number')
   if (PRICE_RE.test(text)) f.push('price')
   if (CLINICAL_RE.test(text)) f.push('clinical')
   if (MINOR_RE.test(text)) f.push('minor')
@@ -55,7 +55,10 @@ export function ruleDraft(state: DemoState, c: Conversation): AiDraft {
   const intro = hasAiSpoken(c) ? '' : `${state.ai.disclosure} `
   if (!hasAiSpoken(c)) reasons.push('First AI reply in this chat, so the AI disclosure is included.')
 
-  const procedure = state.procedures.find(p => text.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase())) ?? state.procedures[0]
+  const ep = state.episodes.filter(e => e.clientId === c.clientId).sort((a, b) => b.number - a.number)[0]
+  const procedure = state.procedures.find(p => text.toLowerCase().includes(p.name.toLowerCase().split(' ')[0].toLowerCase()))
+    ?? state.procedures.find(p => p.id === ep?.interests[0])
+    ?? state.procedures[0]
 
   if (flags.includes('opt_out')) {
     return { text: `Understood, ${first}. We won't message you again. If you ever want to talk, just send us a message here.`, confidence: 0.95, intent: 'opt_out', reasons: [...reasons, 'Opt-out detected: marks the person do-not-contact and stops all follow-ups.'], createdAt: new Date().toISOString() }

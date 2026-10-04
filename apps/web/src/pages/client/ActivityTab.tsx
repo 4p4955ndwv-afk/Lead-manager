@@ -15,6 +15,11 @@ const ACTION_LABEL: Record<string, string> = {
   'payment.link_sent': 'Sent a payment link', 'payment.link_resent': 'Resent a payment link', 'payment.received': 'Payment received', 'payment.refund': 'Refund issued',
   'draft.approved': 'Sent an AI draft', 'draft.edited_and_sent': 'Edited and sent an AI draft', 'conversation.handling': 'Changed who answers', 'conversation.new': 'New conversation',
   'task.done': 'Closed a task', 'task.reassigned': 'Reassigned a task', 'sla.escalated': 'Call SLA escalated', 'episode.start': 'Started a new episode',
+  'client.dnc_cleared': 'Cleared do not contact', 'stage.override_requested': 'Asked for a stage override', 'lead.created': 'Lead created',
+  'appointment.double_booked': 'Double-booked a slot', 'appointment.note': 'Noted an appointment', 'appointment.reminder': 'Sent a reminder',
+  'conversation.assigned': 'Assigned the chat', 'conversation.resolved': 'Resolved the chat', 'message.template_sent': 'Sent a template message',
+  'payment.deposit_paid': 'Deposit paid', 'payment.recorded': 'Payment recorded', 'payment.reminder': 'Sent a payment reminder',
+  'task.created': 'Created a task', 'task.bulk_reassign': 'Reassigned tasks', 'privacy.request_logged': 'Logged a privacy request',
   'document.added': 'Added a document', 'document.signed': 'Document signed', 'document.sent': 'Sent a document', 'document.view': 'Opened clinical photos',
 }
 

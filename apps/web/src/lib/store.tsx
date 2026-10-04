@@ -185,7 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ep.stage = to as Stage
         ep.exit = undefined
         ep.exitReason = undefined
-        if (to === 'alumni') ep.endedAt = iso(Date.now())
+        ep.endedAt = to === 'alumni' ? iso(Date.now()) : undefined
       } else {
         ep.exit = to as Exit
         ep.exitReason = opts.reason
@@ -205,8 +205,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const handoff = (d: DemoState, conv: Conversation, phone: string | undefined) => {
       const client = d.clients.find(c => c.id === conv.clientId)!
       const ep = d.episodes.filter(e => e.clientId === client.id).sort((a, b) => b.number - a.number)[0]
+      if (ep?.exit === 'under18' || client.doNotContact) {
+        conv.needsHuman = true
+        conv.needsHumanReason = ep?.exit === 'under18' ? 'Possible minor' : 'Opted out earlier: review'
+        return
+      }
       if (phone) client.phone = phone
-      if (ep && STAGES.indexOf(ep.stage) < STAGES.indexOf('contact')) doMoveStage(d, ep.id, 'contact', { by: 'ai', reason: phone ? 'Phone number shared in DM' : 'Asked for the clinic number' })
+      if (ep && !ep.exit && STAGES.indexOf(ep.stage) < STAGES.indexOf('contact')) doMoveStage(d, ep.id, 'contact', { by: 'ai', reason: phone ? 'Phone number shared in DM' : 'Asked for the clinic number' })
       const coordinator = (client.ownerId && d.users.find(u => u.id === client.ownerId && u.onShift)) || onShift(d, 'coordinator')!
       client.ownerId = coordinator.id
       const existing = d.tasks.find(t => t.clientId === client.id && t.type === 'call' && t.status === 'open')
@@ -256,6 +261,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (flags.includes('opt_out')) {
           client.doNotContact = true
           if (ep) doMoveStage(d, ep.id, 'dnc', { by: 'ai', reason: 'Asked us to stop messaging' })
+          d.tasks.forEach(t => {
+            if (t.clientId === client.id && t.status === 'open' && (t.type === 'call' || t.type === 'callback' || t.type === 'follow_up')) t.status = 'cancelled'
+          })
         }
         if (flags.includes('minor')) {
           if (ep) doMoveStage(d, ep.id, 'under18', { by: 'ai', reason: 'Said they are under 18' })
@@ -278,6 +286,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           pushNotify(d, { roles: ['manager'] }, { kind: 'escalation', title: `Complaint in DM · ${client.name}`, body: last.text, link: { page: 'inbox', id: conv.id } })
         }
 
+        if (client.doNotContact && !flags.includes('opt_out')) {
+          conv.needsHuman = true
+          conv.needsHumanReason = 'Opted out earlier: review'
+          return
+        }
         if (d.ai.killSwitch) {
           conv.needsHuman = true
           conv.needsHumanReason = 'AI paused (kill switch)'
@@ -396,6 +409,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const s = stateRef.current
         const conv = s.conversations.find(c => c.id === conversationId)
         if (!conv) return null
+        if (s.ai.killSwitch) return 'AI replies are paused for everyone. Resume AI to draft again.'
         let draft = ruleDraft(s, conv)
         let note: string | null = null
         if (useClaude) {
@@ -485,6 +499,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           t.dueAt = det.callbackAt ?? fromNow(3 * HOUR)
           t.type = 'callback'
           t.slaMinutes = undefined
+          t.escalationLevel = 0
         } else if (outcome === 'not_interested' || outcome === 'wrong_number') {
           t.status = 'done'
           if (ep) doMoveStage(d, ep.id, outcome === 'not_interested' ? 'lost' : 'nurture', { reason: outcome === 'not_interested' ? det.note || 'Not interested' : 'Wrong number' })
@@ -492,6 +507,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           t.dueAt = fromNow(2 * DAY)
           t.type = 'follow_up'
           t.slaMinutes = undefined
+          t.escalationLevel = 0
         }
         pushAudit(d, { action: 'call.logged', target: { type: 'task', id: t.id, label: client.name }, detail: `Call outcome: ${outcome.replace('_', ' ')}` })
       }),
@@ -575,7 +591,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const t = setInterval(() => {
       const s = stateRef.current
       const now = Date.now()
-      const due = s.tasks.filter(t => t.status === 'open' && t.slaMinutes && ((t.escalationLevel === 0 && now > ms(t.dueAt)) || (t.escalationLevel === 1 && now > ms(t.createdAt) + 60 * MIN)))
+      const dnc = new Set(s.clients.filter(c => c.doNotContact).map(c => c.id))
+      const due = s.tasks.filter(t => t.status === 'open' && t.slaMinutes && !dnc.has(t.clientId) && ((t.escalationLevel === 0 && now > ms(t.dueAt)) || (t.escalationLevel === 1 && now > ms(t.createdAt) + 60 * MIN)))
       if (!due.length) return
       update(d => {
         for (const x of due) {
