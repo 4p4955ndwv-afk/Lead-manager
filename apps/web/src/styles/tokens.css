@@ -1,0 +1,71 @@
+/* Design tokens. Every colour is a token; dark values are redefined for the OS setting and for an explicit
+   data-theme="dark" choice, so the theme toggle wins in both directions. */
+:root {
+  --bg: #f3f5f6;
+  --surface: #ffffff;
+  --surface-2: #f8fafa;
+  --sunk: #eaeff1;
+  --ink: #132029;
+  --ink-2: #33444f;
+  --muted: #5a6b75;
+  --faint: #8a9aa3;
+  --line: #dbe2e5;
+  --line-strong: #b4c1c7;
+
+  --accent: #0b7a71;
+  --accent-hover: #096a62;
+  --accent-ink: #ffffff;
+  --accent-soft: #def1ee;
+  --accent-line: #9fd3cc;
+
+  --team: #3a5796;
+  --team-soft: #e5ebf8;
+  --ok: #1d7438;
+  --ok-soft: #e1f2e5;
+  --warn: #9a5506;
+  --warn-soft: #fbefdb;
+  --danger: #b02a1f;
+  --danger-soft: #fbe4e1;
+  --info: #1f6f9a;
+  --info-soft: #e1eff7;
+
+  --ig: #c13584;
+  --ig-soft: #f9e3ef;
+  --tt: #111111;
+  --tt-soft: #e9ecee;
+  --wa: #1f8f4e;
+
+  --shadow-1: 0 1px 2px rgba(15, 30, 40, 0.06), 0 1px 1px rgba(15, 30, 40, 0.04);
+  --shadow-2: 0 8px 24px rgba(15, 30, 40, 0.12), 0 2px 6px rgba(15, 30, 40, 0.06);
+  --overlay: rgba(12, 22, 28, 0.42);
+
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --sidebar-w: 232px;
+  --topbar-h: 56px;
+  --tabbar-h: 62px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d1418; --surface: #141e24; --surface-2: #17232a; --sunk: #101a1f; --ink: #e3ebee; --ink-2: #c3d0d6; --muted: #92a4ad; --faint: #6c7f88;
+    --line: #24343d; --line-strong: #3e5560; --accent: #3fc1b3; --accent-hover: #5dd0c3; --accent-ink: #052421; --accent-soft: #11312e; --accent-line: #1f5f58;
+    --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17;
+    --info: #74b9e0; --info-soft: #132b3a; --ig: #f07cbd; --ig-soft: #3a1630; --tt: #e9ecee; --tt-soft: #222c31; --wa: #5fd08f;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5); --overlay: rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d1418; --surface: #141e24; --surface-2: #17232a; --sunk: #101a1f; --ink: #e3ebee; --ink-2: #c3d0d6; --muted: #92a4ad; --faint: #6c7f88;
+  --line: #24343d; --line-strong: #3e5560; --accent: #3fc1b3; --accent-hover: #5dd0c3; --accent-ink: #052421; --accent-soft: #11312e; --accent-line: #1f5f58;
+  --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17;
+  --info: #74b9e0; --info-soft: #132b3a; --ig: #f07cbd; --ig-soft: #3a1630; --tt: #e9ecee; --tt-soft: #222c31; --wa: #5fd08f;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5); --overlay: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
