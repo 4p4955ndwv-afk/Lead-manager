@@ -6,6 +6,7 @@ import { canOpen } from '../lib/permissions'
 import type { PageId } from '../lib/types'
 import { ROLE_LABEL } from '../lib/types'
 import { ago } from '../lib/time'
+import { visibleConversations } from '../pages/inbox/helpers'
 import '../styles/shell.css'
 
 export const NAV: { id: PageId; label: string; icon: IconName; mobile?: boolean }[] = [
@@ -45,7 +46,7 @@ export function Shell({ children, onOpenClaude }: { children: ReactNode; onOpenC
 
   const nav = NAV.filter(n => canOpen(me, n.id))
   const unread = state.notifications.filter(n => n.userId === me.id && !n.read).length
-  const inboxCount = state.conversations.filter(c => c.needsHuman || c.draft).length
+  const inboxCount = visibleConversations(state, me).filter(c => c.needsHuman || c.draft).length
   const myOpenTasks = state.tasks.filter(t => t.status === 'open' && t.assignedTo === me.id).length
   const counts: Partial<Record<PageId, number>> = { inbox: inboxCount, tasks: myOpenTasks }
 
@@ -172,7 +173,7 @@ export function Shell({ children, onOpenClaude }: { children: ReactNode; onOpenC
         {toasts.map(t => (
           <div key={t.id} className={`toast toast-${t.tone}`}>
             <span className="grow">{t.text}</span>
-            {t.action && <button type="button" onClick={() => { actions.go(t.action!.page, t.action!.id); dismissToast(t.id) }}>{t.action.label}</button>}
+            {t.action && <button type="button" onClick={() => { const ac = t.action!; if (ac.onClick) ac.onClick(); else if (ac.page) actions.go(ac.page, ac.id); dismissToast(t.id) }}>{t.action.label}</button>}
             <IconButton icon="x" size="sm" label="Dismiss" onClick={() => dismissToast(t.id)} />
           </div>
         ))}

@@ -1,0 +1,127 @@
+/* Analytics + shared chart styles (prefix .an-). Colours are design tokens only.
+   Palette roles were checked with the dataviz validator (OKLab ΔE ×100, Machado CVD):
+   - focus vs context (--accent vs --faint): CVD ΔE 13.2 light / 15.2 dark, normal 17.2 / 18.1. --faint sits at 2.9:1 on
+     the light surface, so lines also carry direct end labels and every chart has a table view.
+   - Instagram vs TikTok (--ig vs --tt): CVD ΔE 31.4 light / 20.2 dark; legend + share labels back the colours.
+   - Funnel ramp (accent mixed toward ink, then toward surface 84/69/56%): monotone, ΔL ≥ 0.06, light end ≥ 2:1 in both modes. */
+
+.an-page { gap: 18px; }
+
+/* ---- filters ---- */
+.an-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; min-width: 0; }
+.an-filters .segmented { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.an-filter-note { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 260px; min-width: 0; }
+
+/* ---- KPI tiles ---- */
+.an-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.an-kpi { display: grid; align-content: start; gap: 3px; padding: 14px 16px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); min-width: 0; }
+.an-kpi-label { font-size: 12.5px; color: var(--muted); }
+.an-kpi-value { font-family: var(--font-body); font-weight: 600; font-size: 1.6rem; line-height: 1.15; letter-spacing: -0.01em; color: var(--ink); overflow-wrap: anywhere; }
+.an-kpi-delta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 12px; }
+.an-kpi-hint { font-size: 12px; color: var(--muted); }
+.an-kpi-hint b { color: var(--ink-2); font-weight: 600; }
+.an-kpi-locked { align-content: space-between; min-height: 112px; }
+.an-kpi-locked .locked { justify-self: start; }
+.an-delta { display: inline-flex; align-items: center; gap: 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.an-delta.is-good { color: var(--ok); }
+.an-delta.is-bad { color: var(--danger); }
+.an-delta.is-flat { color: var(--muted); }
+.an-delta-down { transform: rotate(90deg); }
+.an-spark { margin-top: 6px; width: 100%; }
+.an-spark svg { display: block; overflow: visible; }
+.an-spark-line { fill: none; stroke: var(--line-strong); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.an-spark-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+
+/* ---- chart cards ---- */
+.an-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.an-chart-card { min-width: 0; }
+.an-chart-card .card-head, .an-table-card .card-head { flex-wrap: nowrap; }
+.an-chart-card .card-head > .row, .an-table-card .card-head > .row { flex: none; }
+.an-note { margin-top: 10px; }
+.an-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.an-legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.an-legend-value { color: var(--ink); font-weight: 600; }
+.an-key-rect { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.an-key-line { width: 14px; height: 2px; border-radius: 1px; flex: none; }
+.an-table-view { max-height: 360px; overflow: auto; }
+.an-table-view .table th { position: sticky; top: 0; z-index: 1; }
+
+.an-plot { position: relative; width: 100%; min-width: 0; border-radius: var(--r-sm); }
+.an-plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.an-plot svg { display: block; overflow: visible; touch-action: pan-y; }
+line.an-gridline { stroke: var(--line); stroke-width: 1; }
+line.an-axis { stroke: var(--line-strong); stroke-width: 1; }
+.an-tick { fill: var(--muted); font-size: 11px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.an-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.an-dot { stroke: var(--surface); stroke-width: 2; }
+.an-crosshair { stroke: var(--line-strong); stroke-width: 1; }
+.an-annot-line { stroke: var(--ink-2); stroke-width: 1; opacity: .55; }
+.an-annot-text { fill: var(--ink-2); font-size: 11.5px; font-weight: 600; font-family: var(--font-body); }
+.an-end-label { font-size: 11.5px; font-family: var(--font-body); }
+.an-end-value { fill: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.an-end-name { fill: var(--muted); }
+.an-col.is-dim path { opacity: .55; }
+.an-col.is-hot path { opacity: 1; }
+
+.an-tip { position: absolute; z-index: 5; pointer-events: none; min-width: 140px; max-width: 240px; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-2); font-size: 12.5px; display: grid; gap: 3px; }
+.an-tip-head { font-size: 11.5px; color: var(--muted); margin-bottom: 1px; white-space: nowrap; }
+.an-tip-row { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.an-tip-row strong { color: var(--ink); font-weight: 600; }
+
+/* share bar (part-to-whole) */
+.an-share { display: flex; gap: 2px; height: 10px; border-radius: 4px; overflow: hidden; }
+.an-share span { display: block; min-width: 2px; }
+
+/* bar list */
+.an-bars { display: grid; gap: 10px; min-width: 0; width: 100%; }
+.an-bars.is-compact { gap: 6px; }
+.an-bar-item { display: grid; gap: 4px; min-width: 0; }
+.an-bar-anchor { position: relative; min-width: 0; }
+.an-bar-row { display: grid; gap: 4px; width: 100%; min-width: 0; padding: 2px 0; border: 0; background: none; color: inherit; text-align: left; border-radius: var(--r-sm); font: inherit; }
+.an-bar-row.is-clickable { cursor: pointer; }
+.an-bar-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.an-bar-label { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.is-compact .an-bar-label { font-size: 12.5px; }
+.an-bar-meta { flex: none; }
+.an-bar-svg { display: block; overflow: visible; }
+.an-bar-track { fill: var(--sunk); }
+.an-bar-row.is-hot .an-bar-track { fill: var(--line); }
+.an-bar-value { fill: var(--ink); font-size: 12px; font-weight: 600; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.an-bar-between { padding-left: 2px; }
+.an-step { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.an-step b { color: var(--ink-2); font-weight: 600; }
+
+.an-locked-card { display: grid; gap: 8px; justify-items: start; padding: 8px 0 4px; }
+
+/* ---- tables ---- */
+.an-table-card .card-head { padding: 16px 18px 0; }
+.an-scroll { overflow-x: auto; border-top: 1px solid var(--line); }
+.an-table { min-width: 560px; }
+.an-table td { font-variant-numeric: tabular-nums; }
+.an-r { text-align: right !important; }
+.an-nowrap { white-space: nowrap; }
+.an-source { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 8px; min-width: 200px; }
+.an-source-name { min-width: 0; }
+.an-source-chip { grid-column: 2; justify-self: start; }
+.an-rate { display: grid; grid-template-columns: 38px minmax(60px, 120px); align-items: center; gap: 8px; }
+.an-rank { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--sunk); color: var(--muted); font-size: 11px; font-weight: 600; flex: none; }
+.an-link { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--ink); font-weight: 600; cursor: pointer; text-align: left; }
+.an-link:hover { color: var(--accent); }
+.an-returning-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 0 18px 14px; }
+.an-mini-stat { display: grid; gap: 0; align-content: start; }
+.an-mini-value { font-weight: 600; font-size: 1.25rem; line-height: 1.2; color: var(--ink); }
+
+@media (max-width: 1100px) {
+  .an-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .an-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .an-kpi { padding: 12px 12px 10px; }
+  .an-kpi-value { font-size: 1.35rem; }
+  .an-table-card .card-head { padding: 14px 14px 0; }
+  .an-returning-summary { padding: 0 14px 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) {
+  .an-kpis { gap: 8px; }
+  .an-kpi-value { font-size: 1.2rem; }
+}

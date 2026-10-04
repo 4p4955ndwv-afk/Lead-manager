@@ -26,6 +26,7 @@
   --warn-soft: #fbefdb;
   --danger: #b02a1f;
   --danger-soft: #fbe4e1;
+  --danger-ink: #ffffff;
   --info: #1f6f9a;
   --info-soft: #e1eff7;
 
@@ -55,7 +56,7 @@
   :root:not([data-theme='light']) {
     --bg: #0d1418; --surface: #141e24; --surface-2: #17232a; --sunk: #101a1f; --ink: #e3ebee; --ink-2: #c3d0d6; --muted: #92a4ad; --faint: #6c7f88;
     --line: #24343d; --line-strong: #3e5560; --accent: #3fc1b3; --accent-hover: #5dd0c3; --accent-ink: #052421; --accent-soft: #11312e; --accent-line: #1f5f58;
-    --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17;
+    --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17; --danger-ink: #2a0906;
     --info: #74b9e0; --info-soft: #132b3a; --ig: #f07cbd; --ig-soft: #3a1630; --tt: #e9ecee; --tt-soft: #222c31; --wa: #5fd08f;
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5); --overlay: rgba(0, 0, 0, 0.55);
     color-scheme: dark;
@@ -64,7 +65,7 @@
 :root[data-theme='dark'] {
   --bg: #0d1418; --surface: #141e24; --surface-2: #17232a; --sunk: #101a1f; --ink: #e3ebee; --ink-2: #c3d0d6; --muted: #92a4ad; --faint: #6c7f88;
   --line: #24343d; --line-strong: #3e5560; --accent: #3fc1b3; --accent-hover: #5dd0c3; --accent-ink: #052421; --accent-soft: #11312e; --accent-line: #1f5f58;
-  --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17;
+  --team: #95abea; --team-soft: #1b2741; --ok: #62c27f; --ok-soft: #13301d; --warn: #f0aa4c; --warn-soft: #36270e; --danger: #f08174; --danger-soft: #3a1a17; --danger-ink: #2a0906;
   --info: #74b9e0; --info-soft: #132b3a; --ig: #f07cbd; --ig-soft: #3a1630; --tt: #e9ecee; --tt-soft: #222c31; --wa: #5fd08f;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4); --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.5); --overlay: rgba(0, 0, 0, 0.55);
   color-scheme: dark;

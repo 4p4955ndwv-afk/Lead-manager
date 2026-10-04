@@ -1,0 +1,128 @@
+/* Settings page. Every class is prefixed .st- ; colours come from tokens only. */
+
+.st-page { max-width: 1320px; grid-template-columns: minmax(0, 1fr); }
+.st-page > [role='tabpanel'] { min-width: 0; }
+.st-page .tabs .tab, .st-page .tabs .tab svg, .st-page .btn svg, .st-page .chip, .st-page .chip svg { flex: none; }
+.st-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; }
+.st-link:hover { text-decoration-color: currentColor; }
+.st-ok { color: var(--ok); }
+.st-bad { color: var(--danger); }
+.st-break { overflow-wrap: anywhere; font-size: 13px; }
+.st-warn-text { display: flex; gap: 6px; align-items: flex-start; color: var(--warn); }
+.st-warn-text svg { flex: none; margin-top: 2px; }
+.st-callout { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.st-callout > svg { flex: none; margin-top: 2px; color: var(--muted); }
+.st-callout-accent { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+.st-callout-accent > svg, .st-callout-accent .strong { color: var(--accent); }
+.st-form-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.st-form-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .st-form-3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) { .st-form-2 { grid-template-columns: minmax(0, 1fr); } }
+.st-save-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.st-fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.st-fieldset legend { padding: 0; margin-bottom: 6px; }
+.st-fieldset .checkbox { align-items: flex-start; }
+.st-fieldset .checkbox input { margin-top: 3px; flex: none; }
+.st-card-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--surface-2); border-radius: 0 0 var(--r-md) var(--r-md); }
+.st-num-input { max-width: 96px; }
+.st-row-off { opacity: .6; }
+.st-row-bad td { background: var(--danger-soft); }
+
+/* ---- organisation ---- */
+.st-branches { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.st-branch { display: grid; gap: 10px; align-content: start; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); min-width: 0; }
+.st-branch-head { display: flex; align-items: flex-start; gap: 8px; }
+.st-rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.st-room { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 6px 4px 12px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--line); min-width: 0; }
+.st-room-add { background: none; border-style: dashed; padding-left: 4px; }
+.st-inline { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+.st-inline .input { flex: 1 1 auto; padding: 5px 8px; }
+
+/* ---- channels ---- */
+.st-channels { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 420px) { .st-channels { grid-template-columns: minmax(0, 1fr); } }
+.st-channel { display: grid; gap: 12px; }
+.st-channel-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.st-channel-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--sunk); color: var(--ink-2); flex: none; }
+.st-ch-instagram { background: var(--ig-soft); color: var(--ig); }
+.st-ch-tiktok { background: var(--tt-soft); color: var(--tt); }
+.st-ch-whatsapp { background: var(--ok-soft); color: var(--wa); }
+.st-ch-sms { background: var(--info-soft); color: var(--info); }
+.st-ch-email { background: var(--team-soft); color: var(--team); }
+.st-channel .kv-row { grid-template-columns: minmax(96px, 30%) minmax(0, 1fr); font-size: 13px; }
+.st-allows { border-top: 1px solid var(--line); padding-top: 10px; font-size: 13px; }
+.st-allows summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.st-allows summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.st-allows ul { margin: 8px 0 6px; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); }
+.st-channel-actions { gap: 6px; }
+
+/* ---- notifications & price list: tables that become stacked cards on phones ---- */
+.st-sla-wrap, .st-price-wrap { border: 0; border-radius: var(--r-md) var(--r-md) 0 0; }
+.st-sla td { vertical-align: top; }
+.st-sla td:first-child { min-width: 250px; }
+.st-sla textarea.input { resize: none; line-height: 1.35; padding: 7px 10px; }
+.st-sla td:nth-child(2) { min-width: 300px; }
+.st-sla td:nth-child(4) { min-width: 170px; }
+.st-sla td:nth-child(4) > span { display: block; margin-top: 4px; }
+.st-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.st-pill { height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.st-pill:hover { color: var(--ink); border-color: var(--ink-2); }
+.st-pill.is-on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.st-price { min-width: 1180px; }
+.st-price td { vertical-align: top; padding: 8px 6px; }
+.st-price th { padding: 10px 6px; }
+.st-price td:first-child, .st-price th:first-child { padding-left: 14px; }
+.st-price-name { min-width: 250px; display: table-cell; }
+.st-price-name > * + * { margin-top: 4px; }
+.st-price-name .field-error, .st-price-name .tiny { display: block; }
+.st-price td:nth-child(2) { min-width: 110px; }
+.st-price .st-num-input { width: 84px; }
+.st-price-remove { width: 40px; }
+@media (max-width: 760px) {
+  .st-sla, .st-price { min-width: 0; }
+  .st-sla thead, .st-price thead { display: none; }
+  .st-sla, .st-sla tbody, .st-price, .st-price tbody { display: block; }
+  .st-sla tr, .st-price tr { display: grid; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); }
+  .st-price tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .st-sla td, .st-price td { display: grid; gap: 4px; padding: 0 !important; border: 0; min-width: 0 !important; }
+  .st-sla td::before, .st-price td[data-label]::before { content: attr(data-label); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .st-price-name, .st-price td:nth-child(2) { grid-column: 1 / -1; }
+  .st-price-remove { position: absolute; }
+  .st-price tr { position: relative; }
+  .st-price-remove { top: 10px; right: 10px; width: auto; }
+  .st-price-name { padding-right: 40px !important; }
+  .st-price .st-num-input, .st-num-input { width: 100%; max-width: none; }
+  .st-row-bad { background: var(--danger-soft); }
+  .st-row-bad td { background: none; }
+}
+
+/* ---- lists (Claude clients, tokens, webhooks, data requests) ---- */
+.st-list { list-style: none; margin: 0; padding: 0; }
+.st-list-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.st-list-row:first-child { border-top: 0; padding-top: 2px; }
+.st-list-row > .stack { flex: 1 1 240px; }
+.st-list-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--sunk); color: var(--ink-2); flex: none; }
+.st-icon-danger { background: var(--danger-soft); color: var(--danger); }
+.st-list-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.st-copy { display: flex; gap: 8px; min-width: 0; }
+.st-copy .input { flex: 1 1 auto; font-size: 13px; }
+.st-copy .btn { flex: none; }
+.st-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); }
+
+/* ---- privacy ---- */
+.st-months { display: flex; align-items: center; gap: 10px; }
+.st-months .st-num-input { width: 96px; }
+@media (max-width: 760px) { .st-months .st-num-input { width: 96px; max-width: 96px; } }
+.st-toggles { list-style: none; margin: 0; padding: 0; }
+.st-toggle-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.st-toggle-row:first-child { border-top: 0; padding-top: 0; }
+
+/* ---- mobile ---- */
+.st-install { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .st-install { grid-template-columns: minmax(0, 1fr); } }
+.st-install-col { display: grid; gap: 12px; align-content: start; padding: 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
+.st-push-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.st-push-list li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--surface-2); flex-wrap: wrap; }
+.st-push-list li svg { color: var(--muted); flex: none; }
+.st-dist { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.st-dist:last-of-type { border-bottom: 0; }

@@ -1,0 +1,51 @@
+/* Ask Claude panel. Every class is prefixed .cp- ; colours come from tokens only. */
+
+.cp-body { display: grid; gap: 16px; align-content: start; min-height: 100%; }
+.cp-intro { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+
+.cp-start { display: grid; gap: 8px; }
+.cp-suggest { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cp-suggest-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; text-align: left; font-size: 13.5px; }
+.cp-suggest-btn > svg:first-child { color: var(--accent); flex: none; }
+.cp-suggest-btn > svg:last-child { color: var(--faint); flex: none; }
+.cp-suggest-btn:hover { border-color: var(--accent-line); background: var(--accent-soft); }
+.cp-suggest-btn:hover > svg:last-child { color: var(--accent); }
+
+.cp-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.cp-msg { display: flex; gap: 8px; min-width: 0; }
+.cp-user { justify-content: flex-end; }
+.cp-user .cp-bubble { max-width: 85%; background: var(--accent); color: var(--accent-ink); border-radius: 14px 14px 4px 14px; padding: 8px 12px; font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cp-assistant .cp-bubble { flex: 1 1 auto; min-width: 0; display: grid; gap: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px 14px 14px 14px; padding: 10px 12px; }
+.cp-mark { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; margin-top: 2px; }
+.cp-thinking { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.cp-thinking .spinner { width: 13px; height: 13px; color: var(--accent); }
+.cp-caret { display: inline-block; width: 7px; height: 15px; background: var(--accent); border-radius: 1px; animation: cp-blink 1s steps(2) infinite; }
+@keyframes cp-blink { 50% { opacity: 0; } }
+.cp-error { display: grid; gap: 8px; justify-items: start; color: var(--danger); font-size: 13px; }
+.cp-error > span { display: inline-flex; gap: 6px; align-items: flex-start; }
+.cp-error svg { margin-top: 2px; flex: none; }
+.cp-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+
+.cp-rich { display: grid; gap: 8px; font-size: 13.5px; line-height: 1.55; color: var(--ink); overflow-wrap: anywhere; }
+.cp-rich p { margin: 0; }
+.cp-rich ul, .cp-rich ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.cp-rich li::marker { color: var(--faint); }
+.cp-rich strong { font-weight: 600; }
+.cp-rich .cp-h { font-weight: 600; }
+.cp-rich blockquote { margin: 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--r-sm) var(--r-sm) 0; color: var(--ink); }
+.cp-client { display: inline; padding: 0; border: 0; background: none; font: inherit; font-weight: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; }
+.cp-client:hover { text-decoration-color: currentColor; }
+
+.cp-foot { width: 100%; display: grid; gap: 8px; min-width: 0; }
+.cp-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; margin: 0 -2px; padding-left: 2px; }
+.cp-chips::-webkit-scrollbar { display: none; }
+.cp-chip { flex: none; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.cp-chip:hover { border-color: var(--accent); color: var(--accent); }
+.cp-composer { display: flex; gap: 8px; align-items: flex-end; }
+.cp-input { flex: 1 1 auto; min-height: 38px; max-height: 140px; resize: none; field-sizing: content; line-height: 1.4; }
+.cp-foot-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cp-clear { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12.5px; font-weight: 500; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 520px) { .cp-foot-meta .faint { display: none; } }
+
+/* The shared drawer sizes to its content; pin this one to the viewport so the thread scrolls and the composer stays put. */
+.drawer:has(.cp-body) { height: 100vh; height: 100dvh; max-height: 100dvh; }

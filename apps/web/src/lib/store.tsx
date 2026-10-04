@@ -57,14 +57,15 @@ function parseHash(): Route {
 // ---------------------------------------------------------------------------------------------
 // public API
 
-export interface Toast { id: string; text: string; tone: 'info' | 'success' | 'warn' | 'danger'; action?: { label: string; page: PageId; id?: string } }
+export interface ToastAction { label: string; page?: PageId; id?: string; onClick?: () => void }
+export interface Toast { id: string; text: string; tone: 'info' | 'success' | 'warn' | 'danger'; action?: ToastAction }
 
 export interface Actions {
   /** Escape hatch: mutate a draft copy of the whole state. Use for page-specific changes. */
   update: (fn: (draft: DemoState) => void) => void
   setUser: (userId: string) => void
   go: (page: PageId, id?: string) => void
-  toast: (text: string, tone?: Toast['tone'], action?: Toast['action']) => void
+  toast: (text: string, tone?: Toast['tone'], action?: ToastAction) => void
   audit: (e: Omit<AuditEntry, 'id' | 'at' | 'actor'> & { actor?: AuditEntry['actor'] }) => void
   notify: (to: { userIds?: string[]; roles?: Role[] }, n: Omit<Notification, 'id' | 'at' | 'userId' | 'read'>) => void
   markRead: (notificationId: string) => void
@@ -371,6 +372,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       approveDraft: (conversationId, editedText) => {
         const conv = stateRef.current.conversations.find(c => c.id === conversationId)
         if (!conv?.draft) return
+        if (stateRef.current.ai.killSwitch) {
+          a.toast('AI replies are paused for everyone. Write the reply yourself or resume AI first.', 'warn')
+          return
+        }
         const text = editedText ?? conv.draft.text
         update(d => {
           const c = d.conversations.find(x => x.id === conversationId)!
@@ -463,7 +468,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           d.appointments.push(appt)
           if (det.depositDueAt && ep) d.payments.push({ id: uid('py'), clientId: client.id, episodeId: ep.id, kind: 'deposit', amount: Math.round(proc.price * proc.depositPct / 100), status: 'due', dueAt: det.depositDueAt })
-          if (ep) doMoveStage(d, ep.id, 'booked', { reason: 'Booked on call' })
+          if (ep && !ep.exit && STAGES.indexOf(ep.stage) < STAGES.indexOf('booked')) doMoveStage(d, ep.id, 'booked', { reason: 'Booked on call' })
           t.status = 'done'
           pushAudit(d, { action: 'appointment.booked', target: { type: 'appointment', id: appt.id, label: client.name }, detail: `Consultation booked for ${new Date(det.start).toLocaleString()}` })
         } else if (outcome === 'no_answer') {
@@ -519,6 +524,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ap.status = status
         const ep = d.episodes.find(e => e.id === ap.episodeId)
         if (status === 'completed' && ap.type === 'consultation' && ep && STAGES.indexOf(ep.stage) < STAGES.indexOf('consultation')) doMoveStage(d, ep.id, 'consultation', { reason: 'Consultation attended' })
+        if (status === 'completed' && ap.type === 'session' && ap.sessionNo) {
+          for (const pl of d.plans.filter(x => x.episodeId === ap.episodeId)) {
+            const item = pl.items.find(i => i.procedureId === ap.procedureId)
+            const sess = item?.sessions.find(x => x.no === ap.sessionNo)
+            if (sess && sess.status !== 'done') {
+              sess.status = 'done'
+              sess.date = ap.start
+              sess.appointmentId = ap.id
+            }
+          }
+        }
         if (status === 'no_show') {
           const fd = onShift(d, 'frontdesk') ?? onShift(d, 'coordinator')
           if (fd) d.tasks.unshift({ id: uid('tk'), type: 'follow_up', title: `Rebook no-show: ${d.clients.find(c => c.id === ap.clientId)?.name}`, clientId: ap.clientId, episodeId: ap.episodeId, assignedTo: fd.id, createdAt: iso(Date.now()), dueAt: fromNow(2 * HOUR), escalationLevel: 0, status: 'open', attempts: [], priority: 'high' })

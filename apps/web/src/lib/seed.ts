@@ -7,7 +7,7 @@ import type {
 import { STAGES } from './types'
 import { DAY, HOUR, MIN, iso, startOfDay, uid } from './time'
 
-export const SEED_VERSION = 3
+export const SEED_VERSION = 4
 
 // deterministic pseudo-random so the demo looks the same on every reset
 function rng(seedNum: number) {
@@ -112,7 +112,7 @@ const SPECS: Spec[] = [
     ], draft: 'Great question! Underarms and full legs together are usually between £600 and £1,400 for a 6-session course, depending on the areas. The exact price is confirmed at a free consultation. Would you like our coordinator to call you to find a time? If so, just drop your number here.',
   },
   {
-    id: 'cl_omar', name: 'Omar Siddiqui', channel: 'tiktok', handle: 'omar.fades', stage: 'contact', interests: ['p_fue', 'p_prp'], createdDaysAgo: 0, score: 82, phone: '+447700900482',
+    id: 'cl_omar', name: 'Omar Siddiqui', channel: 'tiktok', handle: 'omar.fades', stage: 'contact', interests: ['p_fue', 'p_prp'], createdDaysAgo: 0, score: 82, phone: '+447700900482', owner: 'u_co1',
     source: 'TikTok: "Hairline restoration journey, month 9"', lines: [
       ['c', 'yo do u guys do hair transplants', 48],
       ['a', 'Hi! I\'m Northlight\'s AI assistant (a person can step in any time). Yes, we do FUE hair transplants and PRP scalp therapy. Are you thinking about your hairline, the crown, or both?', 47],
@@ -124,7 +124,7 @@ const SPECS: Spec[] = [
     ],
   },
   {
-    id: 'cl_sofia', name: 'Sofía Herrera', channel: 'instagram', handle: 'sofiaherrera_', language: 'es', stage: 'contact', interests: ['p_peel'], createdDaysAgo: 0, score: 71, phone: '+447700900517',
+    id: 'cl_sofia', name: 'Sofía Herrera', channel: 'instagram', handle: 'sofiaherrera_', language: 'es', stage: 'contact', interests: ['p_peel'], createdDaysAgo: 0, score: 71, phone: '+447700900517', owner: 'u_co1',
     source: 'Story reply: "Glow week offer"', lines: [
       ['c', 'Hola! Hacéis peelings químicos? Cuánto cuesta?', 75],
       ['a', '¡Hola! Soy el asistente de Northlight, una IA; una persona puede intervenir cuando quieras. Sí, hacemos peelings químicos. Un curso de 3 sesiones suele costar entre £300 y £600. ¿Quieres que una coordinadora te llame para reservar una consulta gratuita?', 74],
@@ -327,7 +327,7 @@ export function seed(): DemoState {
       history: path.map((st, k) => ({ at: iso(Date.parse(created) + (k / path.length) * daysAgo * DAY), from: k ? path[k - 1] : undefined, to: st, by: k < 3 ? 'ai' : owner })),
     }
     if (exit) ep.history.push({ at: agoD(Math.max(0, daysAgo - 2)), from: stage, to: exit, by: exit === 'spam' ? 'ai' : owner, reason: ep.exitReason })
-    if (stage === 'alumni') ep.endedAt = agoD(Math.max(1, daysAgo - 30))
+    if (stage === 'alumni') ep.endedAt = ep.history[ep.history.length - 1].at
     episodes.push(ep)
     if (stage === 'treatment' || stage === 'aftercare' || stage === 'alumni') {
       const done = stage === 'treatment' ? Math.max(1, Math.floor(proc.sessions / 2)) : proc.sessions
@@ -348,6 +348,21 @@ export function seed(): DemoState {
     { id: 'tk_noah_pay', type: 'payment', title: 'Instalment 2 overdue: Noah Bennett', clientId: 'cl_noah', episodeId: 'ep_noah', assignedTo: 'u_fin', createdAt: agoD(3), dueAt: agoD(1), escalationLevel: 0, status: 'open', attempts: [], priority: 'high' },
     { id: 'tk_marcus', type: 'review', title: 'Ask Marcus Lee for a review (6-month follow-up done)', clientId: 'cl_marcus', episodeId: 'ep_marcus', assignedTo: 'u_co2', createdAt: agoD(1), dueAt: at(2, 12, 0), escalationLevel: 0, status: 'open', attempts: [], priority: 'normal' },
   )
+
+  // past lead calls, so the call history and leaderboard have real attempts behind them
+  episodes.forEach((ep, k) => {
+    const client = clients.find(c => c.id === ep.clientId)
+    if (!client?.phone || STAGES.indexOf(ep.stage) < STAGES.indexOf('booked') || ep.number > 1 && ep.stage === 'qualifying') return
+    const contact = ep.history.find(h => h.to === 'contact')
+    if (!contact) return
+    const by = client.ownerId ?? 'u_co1'
+    const start = Date.parse(contact.at)
+    const late = k % 6 === 0
+    const attempts: Task['attempts'] = []
+    if (k % 4 === 1) attempts.push({ at: iso(start + (late ? 34 : 9) * MIN), by, outcome: 'no_answer' })
+    attempts.push({ at: iso(start + (attempts.length ? 130 : late ? 41 : 6 + (k % 8)) * MIN), by, outcome: 'booked', note: 'Consultation booked; deposit by link within 24 h' })
+    tasks.push({ id: `tk_past_${ep.id}`, type: 'call', title: `Call ${client.name} to book a consultation`, clientId: client.id, episodeId: ep.id, assignedTo: by, createdAt: contact.at, dueAt: iso(start + 15 * MIN), slaMinutes: 15, escalationLevel: late ? 1 : 0, status: 'done', attempts, priority: 'urgent' })
+  })
 
   // appointments around this week
   const appt = (id: string, clientId: string, type: Appointment['type'], day: number, hh: number, mm: number, dur: number, practitionerId: string, roomId: string, status: Appointment['status'], extra: Partial<Appointment> = {}): Appointment => ({
@@ -373,7 +388,7 @@ export function seed(): DemoState {
   plans.push(
     { id: 'pl_noah', episodeId: 'ep_noah', clientId: 'cl_noah', status: 'accepted', discount: 300, paymentPlan: { type: 'instalments', instalments: 3 }, consentSigned: true, createdBy: 'u_cl1', createdAt: agoD(62),
       items: [
-        { id: 'pi_noah1', procedureId: 'p_prp', sessionsTotal: 4, price: 1200, addedAt: agoD(62), sessions: sess(4, 2, [3], 56, 28) },
+        { id: 'pi_noah1', procedureId: 'p_prp', sessionsTotal: 4, price: 1200, addedAt: agoD(62), sessions: [{ no: 1, status: 'done', date: agoD(28) }, { no: 2, status: 'booked', appointmentId: 'ap_noah2' }, { no: 3, status: 'booked', appointmentId: 'ap_noah3' }, { no: 4, status: 'due' }] },
         { id: 'pi_noah2', procedureId: 'p_fue', sessionsTotal: 1, price: 4500, addedAt: agoD(20), sessions: sess(1, 0) },
       ] },
     { id: 'pl_ella', episodeId: 'ep_ella', clientId: 'cl_ella', status: 'accepted', discount: 0, paymentPlan: { type: 'full' }, consentSigned: true, createdBy: 'u_cl1', createdAt: agoD(118),
@@ -400,7 +415,7 @@ export function seed(): DemoState {
   )
 
   notes.push(
-    { id: 'no_1', clientId: 'cl_noah', authorId: 'u_cl1', at: agoD(28), text: 'Good response to PRP so far; density improving at the crown. Proceed with session 3 as planned.', clinical: true },
+    { id: 'no_1', clientId: 'cl_noah', authorId: 'u_cl1', at: agoD(28), text: 'Good response to the first PRP session; early density improvement at the crown. Proceed with session 2 as planned.', clinical: true },
     { id: 'no_2', clientId: 'cl_noah', authorId: 'u_co2', at: agoD(20), text: 'Added FUE to the plan after his review; he asked to spread payments, set up 3 instalments.', clinical: false },
     { id: 'no_3', clientId: 'cl_ella', authorId: 'u_cl1', at: agoM(200), text: 'Session 5 done at setting 3. Mild redness, resolved in clinic. Book session 6 in 6 weeks.', clinical: true },
     { id: 'no_4', clientId: 'cl_chloe', authorId: 'u_co1', at: agoD(2), text: 'Likes the plan; wants to check instalments with her partner. Call Thursday afternoon.', clinical: false },
@@ -411,7 +426,7 @@ export function seed(): DemoState {
     { id: 'dc_1', clientId: 'cl_noah', kind: 'consent_form', title: 'Consent: PRP scalp therapy v3', at: agoD(62), restricted: false, signed: true },
     { id: 'dc_2', clientId: 'cl_noah', kind: 'consent_form', title: 'Consent: Hair transplant (FUE) v2', at: agoD(19), restricted: false, signed: true },
     { id: 'dc_3', clientId: 'cl_noah', kind: 'photo', title: 'Crown, baseline (4 photos)', at: agoD(62), restricted: true },
-    { id: 'dc_4', clientId: 'cl_noah', kind: 'photo', title: 'Crown, after session 2 (4 photos)', at: agoD(28), restricted: true },
+    { id: 'dc_4', clientId: 'cl_noah', kind: 'photo', title: 'Crown, after session 1 (4 photos)', at: agoD(28), restricted: true },
     { id: 'dc_5', clientId: 'cl_ella', kind: 'consent_form', title: 'Consent: Laser hair removal v4', at: agoD(118), restricted: false, signed: true },
     { id: 'dc_6', clientId: 'cl_chloe', kind: 'quote', title: 'Quote Q-1042: peel + skin booster', at: agoD(2), restricted: false },
     { id: 'dc_7', clientId: 'cl_marcus', kind: 'photo', title: 'Hairline, 6 months (6 photos)', at: agoD(1), restricted: true },
