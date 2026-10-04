@@ -156,6 +156,7 @@
 .ca-agenda-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 14px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
 .ca-agenda-daylink { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; font-weight: 600; color: var(--ink); text-align: left; min-width: 0; }
 .ca-agenda-daylink:hover { color: var(--accent); }
+.ca-nowrap { white-space: nowrap; }
 .ca-agenda-rel { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 600; }
 .ca-agenda-empty { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 14px; border: 1px dashed var(--line); border-radius: var(--r-md); }
 .ca-agenda-empty .ca-agenda-daylink { font-weight: 500; color: var(--muted); font-size: 13px; }

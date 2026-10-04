@@ -138,6 +138,8 @@ export function currencySymbol(currency: string): string {
 export const clientOf = (s: DemoState, a: Appointment): Client | undefined => s.clients.find(c => c.id === a.clientId)
 export const procOf = (s: DemoState, id: string | undefined): Procedure | undefined => (id ? s.procedures.find(p => p.id === id) : undefined)
 export const firstName = (name: string) => name.replace(/^Dr\.? /, '').split(' ')[0]
+/** Lower-cases a procedure name for use mid-sentence without breaking acronyms: "Hair transplant (FUE)" -> "hair transplant (FUE)", "PRP scalp therapy" stays. */
+export const midSentence = (name: string) => name.replace(/^([A-Z])(?=[a-z])/, c => c.toLowerCase())
 
 /** The plan item an appointment belongs to (same client and procedure, preferring the same episode). */
 export function planItemFor(s: DemoState, clientId: string, episodeId: string | undefined, procedureId: string | undefined): { plan: TreatmentPlan; item: PlanItem } | undefined {
@@ -211,7 +213,8 @@ export function ageInYears(dob: string, at = Date.now()): number | null {
   return age
 }
 
-export interface AgeCheck { blocked: boolean; title: string; detail: string; unverified: boolean }
+/** `scope` says what the block is about: the client (under 18, nothing can be booked) or only the chosen treatment. */
+export interface AgeCheck { blocked: boolean; title: string; detail: string; unverified: boolean; scope?: 'client' | 'procedure' }
 
 /**
  * Under-18s can never be booked. A client who is not age-verified and either has an under-18 exit on any
@@ -225,6 +228,7 @@ export function ageCheck(s: DemoState, client: Client, procedureId?: string): Ag
     return {
       blocked: true,
       unverified: true,
+      scope: 'client',
       title: 'Booking blocked: client may be under 18',
       detail: under18Exit
         ? `${client.name} was marked under 18${under18Exit.exitReason ? ` (“${under18Exit.exitReason}”)` : ''}. Northlight only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`
@@ -236,8 +240,9 @@ export function ageCheck(s: DemoState, client: Client, procedureId?: string): Ag
     return {
       blocked: true,
       unverified: !client.ageVerified,
+      scope: 'procedure',
       title: `${proc.name} needs clients aged ${proc.minAge}+`,
-      detail: `${client.name} is ${age}. This treatment cannot be booked until they reach ${proc.minAge}. This cannot be overridden.`,
+      detail: `${client.name} is ${age}. This treatment cannot be booked until they reach ${proc.minAge}. This cannot be overridden, but you can choose another treatment.`,
     }
   }
   return { blocked: false, unverified: !client.ageVerified, title: '', detail: '' }

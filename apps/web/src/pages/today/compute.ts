@@ -1,7 +1,7 @@
 // Selectors for the Today page. Everything is derived from the store state at render time.
 import type { AiMode, Appointment, Conversation, DemoState, PageId, Payment, Role, Task, User } from '../../lib/types'
 import { DAY, HOUR, MIN, money, ms, sameDay, timeOf } from '../../lib/time'
-import { fmtDuration, median, plural } from '../analytics/format'
+import { fmtDuration, fmtInt, median, plural } from '../analytics/format'
 
 export const seesAll = (role: Role) => role === 'owner' || role === 'manager'
 
@@ -112,6 +112,13 @@ export function procedureLine(s: DemoState, a: Appointment): string | null {
   return `${proc.name} · Session ${a.sessionNo} of ${item?.sessionsTotal ?? proc.sessions}`
 }
 
+/** What the visit is for, without repeating "Session": "Laser hair removal · Session 5 of 6", "Follow-up · 6-month FUE review". */
+export function apptWhat(s: DemoState, a: Appointment, withNotes = true): string {
+  const proc = procedureLine(s, a)
+  if (a.type === 'session' && a.sessionNo && proc) return proc
+  return `${APPT_TYPE[a.type]}${proc ? ` · ${proc}` : withNotes && a.notes ? ` · ${a.notes}` : ''}`
+}
+
 // ---- payments ------------------------------------------------------------------------------------
 
 export const isOverdue = (p: Payment, now: number) => p.status === 'overdue' || (p.status === 'due' && ms(p.dueAt) < now)
@@ -151,7 +158,7 @@ export function headline(s: DemoState, me: User, now: number, can: (p: 'chats.vi
   if (role === 'finance') {
     const p = openPayments(s, now)
     if (p.overdue.length) return { tone: 'danger', text: `${money(p.overdueTotal, s.settings.currency)} is overdue across ${plural(p.overdue.length, 'payment')}. Start with ${clientName(s, p.overdue[0].clientId)}.`, link: { page: 'client', id: p.overdue[0].clientId, label: 'Open client' } }
-    if (p.due7.length) return { tone: 'info', text: `${plural(p.due7.length, 'payment')} worth ${money(p.due7Total, s.settings.currency)} fall due this week.` }
+    if (p.due7.length) return { tone: 'info', text: `${plural(p.due7.length, 'payment')} worth ${money(p.due7Total, s.settings.currency)} ${p.due7.length === 1 ? 'falls' : 'fall'} due this week.` }
     return { tone: 'ok', text: 'Nothing is overdue. Payments due this week will show here.' }
   }
   if (role === 'clinician') {
@@ -173,8 +180,10 @@ export function headline(s: DemoState, me: User, now: number, can: (p: 'chats.vi
     const m = s.metrics
     const last7 = m.slice(-7).reduce((a, d) => a + d.dms, 0)
     const prev7 = m.slice(-14, -7).reduce((a, d) => a + d.dms, 0)
-    const change = prev7 ? (last7 - prev7) / prev7 : 0
-    return { tone: change >= 0 ? 'ok' : 'warn', text: `${last7} DMs in the last 7 days, ${change >= 0 ? 'up' : 'down'} ${Math.abs(Math.round(change * 100))}% on the week before.`, link: { page: 'analytics', label: 'Open analytics' } }
+    if (!last7) return { tone: 'info', text: 'No DMs recorded in the last 7 days yet. Daily numbers are added overnight.', link: { page: 'analytics', label: 'Open analytics' } }
+    if (!prev7) return { tone: 'ok', text: `${fmtInt(last7)} DMs in the last 7 days.`, link: { page: 'analytics', label: 'Open analytics' } }
+    const change = (last7 - prev7) / prev7
+    return { tone: change >= 0 ? 'ok' : 'warn', text: `${fmtInt(last7)} DMs in the last 7 days, ${change >= 0 ? 'up' : 'down'} ${Math.abs(Math.round(change * 100))}% on the week before.`, link: { page: 'analytics', label: 'Open analytics' } }
   }
   // owner, manager, coordinator
   const calls = callQueue(s, me)

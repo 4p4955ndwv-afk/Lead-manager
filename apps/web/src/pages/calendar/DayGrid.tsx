@@ -54,7 +54,12 @@ export function DayGrid({ state, day, mode, columns, appts, selectedId, symbol, 
   useLayoutEffect(() => {
     const el = scroller.current
     if (!el) return
-    const target = isToday && showNow ? nowMin - 60 : firstMin - 30
+    let target = isToday && showNow ? nowMin - 60 : firstMin - 30
+    // Never open with an appointment cut off at the top: start from the earliest one that spans the target.
+    for (const a of appts) {
+      const s = minutesOfDay(ms(a.start)), e = s + apptMinutes(a)
+      if (a.status !== 'cancelled' && s < target && e > target) target = Math.min(target, s - 10)
+    }
     el.scrollTop = Math.max(0, (target - DAY_START_MIN) * PX_PER_MIN - 10)
     // only when the day or view changes, not on every tick
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -202,7 +202,7 @@ export function LineChart({ labels, tipLabels, series, annotation, height = 240,
   return (
     <div ref={ref} className="an-plot" style={{ height }} role="group" aria-label={ariaLabel + '. Use the arrow keys to read each day.'} {...nav.bind}>
       {width > 0 && n > 0 && (
-        <svg width={w} height={height} onPointerMove={onMove} onPointerLeave={() => nav.setIndex(null)} aria-hidden="true">
+        <svg width={w} height={height} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => nav.setIndex(null)} aria-hidden="true">
           {ticks.map(t => (
             <g key={t}>
               <line x1={m.left} x2={m.left + iw} y1={y(t)} y2={y(t)} className={t === 0 ? 'an-axis' : 'an-gridline'} />
@@ -275,11 +275,15 @@ export function StackedColumns({ labels, tipLabels, series, height = 200, ariaLa
   const h = (v: number) => (v / top) * ih
   const tickEvery = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 74))))
   const hi = nav.index
+  const onMove = (e: PointerEvent<SVGSVGElement>) => {
+    const px = e.clientX - e.currentTarget.getBoundingClientRect().left
+    nav.setIndex(Math.max(0, Math.min(n - 1, Math.floor((px - m.left) / band))))
+  }
 
   return (
     <div ref={ref} className="an-plot" style={{ height }} role="group" aria-label={ariaLabel + '. Use the arrow keys to read each day.'} {...nav.bind}>
       {width > 0 && n > 0 && (
-        <svg width={w} height={height} onPointerLeave={() => nav.setIndex(null)} aria-hidden="true">
+        <svg width={w} height={height} onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => nav.setIndex(null)} aria-hidden="true">
           {ticks.map(t => (
             <g key={t}>
               <line x1={m.left} x2={m.left + iw} y1={m.top + ih - h(t)} y2={m.top + ih - h(t)} className={t === 0 ? 'an-axis' : 'an-gridline'} />
@@ -302,7 +306,7 @@ export function StackedColumns({ labels, tipLabels, series, height = 200, ariaLa
                   base = y0
                   return <path key={s.id} d={d} style={{ fill: s.color }} />
                 })}
-                <rect x={m.left + band * i} y={m.top} width={band} height={ih} fill="transparent" onPointerEnter={() => nav.setIndex(i)} onPointerMove={() => nav.setIndex(i)} />
+                <rect x={m.left + band * i} y={m.top} width={band} height={ih} fill="transparent" />
               </g>
             )
           })}
@@ -328,14 +332,15 @@ export function BarList({ rows, max, ariaLabel, barHeight = 14, compact = false,
   const [ref, width] = useWidth<HTMLDivElement>()
   const [hot, setHot] = useState<number | null>(null)
   const [kb, setKb] = useState(false)
-  const top = max ?? Math.max(1, ...rows.map(r => r.value))
+  // Missing values (NaN, e.g. no baseline yet) draw no bar and read as a dash, and never break the scale.
+  const top = max ?? Math.max(1, ...rows.map(r => r.value).filter(Number.isFinite))
   const valueRoom = 76
   const track = Math.max(40, width - valueRoom)
   return (
     <div ref={ref} className={`an-bars ${compact ? 'is-compact' : ''}`} role="list" aria-label={ariaLabel}>
       {width > 0 && rows.map((r, i) => {
-        const bw = r.value > 0 ? Math.max(2, (r.value / top) * track) : 0
-        const text = r.display ?? format(r.value)
+        const bw = r.value > 0 && Number.isFinite(r.value) ? Math.max(2, Math.min(track, (r.value / top) * track)) : 0
+        const text = r.display ?? (Number.isFinite(r.value) ? format(r.value) : '—')
         const inner = (
           <>
             <span className="an-bar-label">

@@ -18,6 +18,12 @@ const SUGGESTIONS = [
   'Which clients are due a session in the next 7 days?',
 ]
 
+/** Partial text while streaming: drop a half-started list marker and close an open **bold** so no raw asterisks show. */
+function streamingText(text: string): string {
+  const t = text.replace(/\n\s*([-*•>]|\d+[.)])?\s*$/, '').replace(/(^|[^*])\*$/, '$1')
+  return (t.match(/\*\*/g)?.length ?? 0) % 2 ? (/\*\*\s*$/.test(t) ? t.replace(/\*\*\s*$/, '') : t + '**') : t
+}
+
 /** Error codes that mean live Claude can't be used in this view at all, so the demo answer is shown instead. */
 const UNAVAILABLE = new Set(['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'])
 
@@ -233,7 +239,7 @@ export default function ClaudePanel({ open, onClose, initialPrompt }: { open: bo
                 <span className="cp-mark" aria-hidden="true"><Icon name="sparkles" size={14} /></span>
                 <div className="cp-bubble">
                   {t.status === 'thinking' && <span className="cp-thinking"><span className="spinner" aria-hidden="true" />Thinking…</span>}
-                  {t.text && <Rich text={t.status === 'streaming' ? t.text.replace(/\n\s*([-*•>]|\d+[.)])?\s*$/, '') : t.text} clients={state.clients} onClient={openClient} />}
+                  {t.text && <Rich text={t.status === 'streaming' ? streamingText(t.text) : t.text} clients={state.clients} onClient={openClient} />}
                   {t.status === 'streaming' && <span className="cp-caret" aria-hidden="true" />}
                   {t.status === 'error' && (
                     <div className="cp-error">

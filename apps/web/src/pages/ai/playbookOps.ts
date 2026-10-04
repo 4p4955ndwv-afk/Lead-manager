@@ -1,8 +1,19 @@
 // State changes for playbook versions and proposals. Each runs inside actions.update(d => ...).
 // Ids and version names are worked out before the update (reducers may run twice in development).
-import type { DemoState, PlaybookVersion, Proposal } from '../../lib/types'
+import type { DemoState, Notification, PlaybookVersion, Proposal, Role } from '../../lib/types'
+import type { Actions } from '../../lib/store'
+import { canOpen } from '../../lib/permissions'
 import { iso, uid } from '../../lib/time'
 import { nextVersionName } from './compute'
+
+/** Notifies active people in these roles. Anyone who can't open the AI page (e.g. coordinators) gets a link to the inbox instead of a dead link. */
+export function notifyRoles(actions: Actions, s: DemoState, roles: Role[], n: Omit<Notification, 'id' | 'at' | 'userId' | 'read'>) {
+  const people = s.users.filter(u => roles.includes(u.role) && u.status === 'active')
+  const can = people.filter(u => canOpen(u, 'ai')).map(u => u.id)
+  const cannot = people.filter(u => !canOpen(u, 'ai')).map(u => u.id)
+  if (can.length) actions.notify({ userIds: can }, n)
+  if (cannot.length) actions.notify({ userIds: cannot }, { ...n, link: { page: 'inbox' } })
+}
 
 export function pushAudit(d: DemoState, action: string, target: { id: string; label: string }, detail: string, reason?: string) {
   d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action, target: { type: 'playbook', ...target }, detail, reason: reason || undefined })

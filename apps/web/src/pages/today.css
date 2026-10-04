@@ -70,7 +70,8 @@ button.td-item:hover { background: var(--surface-2); }
 /* ---- timeline ---- */
 .td-timeline { list-style: none; margin: 0; padding: 4px 0 8px; border-top: 1px solid var(--line); }
 .td-slot { display: grid; grid-template-columns: 70px 14px minmax(0, 1fr); gap: 10px; width: 100%; padding: 8px 18px; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
-.td-slot:hover { background: var(--surface-2); }
+.td-slot:hover:not(:disabled) { background: var(--surface-2); }
+.td-slot:disabled { cursor: default; opacity: 1; }
 .td-slot.is-past { color: var(--muted); }
 .td-slot.is-past .strong { color: var(--ink-2); }
 .td-slot.is-current { background: var(--accent-soft); }

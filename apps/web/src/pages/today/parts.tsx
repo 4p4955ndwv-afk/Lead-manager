@@ -9,7 +9,7 @@ import { FunnelBars } from '../analytics/Funnel'
 import { funnelOf, toDays, windowOf } from '../analytics/data'
 import { fmtPct } from '../analytics/format'
 import {
-  APPT_TYPE, STATUS_LABEL, STATUS_TONE, claudePrompt, clientChannel, clientName, dailyBrief, lastClientText, procedureLine, reasonOf, reasonTone,
+  STATUS_LABEL, STATUS_TONE, apptWhat, claudePrompt, clientChannel, clientName, dailyBrief, lastClientText, reasonOf, reasonTone,
 } from './compute'
 
 // ---- summary tile --------------------------------------------------------------------------------
@@ -142,7 +142,7 @@ export function NeedsPerson({ convs, scopeNote }: { convs: Conversation[]; scope
 export function Schedule({ appts, title = "Today's schedule", subtitle, onOpen, emptyBody }: { appts: Appointment[]; title?: string; subtitle?: string; onOpen?: (a: Appointment) => void; emptyBody?: string }) {
   const { state, actions, me } = useStore()
   const now = useNow(30_000)
-  const open = onOpen ?? ((a: Appointment) => actions.go('calendar', a.id))
+  const open = onOpen ?? (canOpen(me, 'calendar') ? (a: Appointment) => actions.go('calendar', a.id) : undefined)
   const nowIndex = appts.findIndex(a => ms(a.start) > now)
   const markerAt = nowIndex === -1 ? appts.length : nowIndex
   const items: ReactNode[] = []
@@ -150,12 +150,11 @@ export function Schedule({ appts, title = "Today's schedule", subtitle, onOpen, 
     if (i === markerAt) items.push(<NowMarker key="now" now={now} />)
     const practitioner = state.users.find(u => u.id === a.practitionerId)
     const room = state.rooms.find(r => r.id === a.roomId)
-    const proc = procedureLine(state, a)
     const past = ms(a.end) < now
     const current = ms(a.start) <= now && ms(a.end) >= now
     items.push(
       <li key={a.id}>
-        <button type="button" className={`td-slot ${past ? 'is-past' : ''} ${current ? 'is-current' : ''}`} onClick={() => open(a)}>
+        <button type="button" className={`td-slot ${past ? 'is-past' : ''} ${current ? 'is-current' : ''}`} onClick={open ? () => open(a) : undefined} disabled={!open}>
           <span className="td-slot-time num">
             <span className="strong">{timeOf(a.start)}</span>
             <span className="tiny muted">{Math.round((ms(a.end) - ms(a.start)) / 60000)} min</span>
@@ -167,7 +166,7 @@ export function Schedule({ appts, title = "Today's schedule", subtitle, onOpen, 
               <Chip tone={STATUS_TONE[a.status]}>{STATUS_LABEL[a.status]}</Chip>
               {a.deposit === 'due' && <Chip tone="warn" icon="card">Deposit due</Chip>}
             </span>
-            <span className="small td-slot-what">{APPT_TYPE[a.type]}{proc ? ` · ${proc}` : a.notes ? ` · ${a.notes}` : ''}</span>
+            <span className="small td-slot-what">{apptWhat(state, a)}</span>
             <span className="tiny muted">{practitioner?.name ?? 'No practitioner'}{room ? ` · ${room.name}` : ''}</span>
           </span>
         </button>

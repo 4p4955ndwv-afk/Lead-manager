@@ -5,7 +5,7 @@ import type { PlaybookSection, PlaybookVersion } from '../../lib/types'
 import { Button, Card, Chip, EmptyState, Field, IconButton, ReasonDialog, Segmented, Toggle, UserAvatar } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { STATUS_LABEL, STATUS_TONE, diffSections, evaluateDraft, previousApproved, sortVersions, type SectionDiff } from './compute'
-import { createDraft, newDraftIds, pushAudit } from './playbookOps'
+import { createDraft, newDraftIds, notifyRoles, pushAudit } from './playbookOps'
 import { Scorecard } from './Scorecard'
 
 type DialogKind = 'approve' | 'signoff' | 'publish' | 'rollback' | 'sendback' | 'delete' | 'submit'
@@ -160,7 +160,7 @@ function VersionDetail({ v, live, editing, setEditing, onNewDraft, onSelect }: {
           x.status = 'live'
           pushAudit(d, 'playbook.publish', { id: v.id, label }, `${v.version} is live${old ? `; ${old.version} retired` : ''}`, reason)
         })
-        actions.notify({ roles: ['owner', 'manager', 'coordinator'] }, { kind: 'ai', title: `Playbook ${v.version} is live`, body: `The AI now replies using ${v.version}${old ? ` instead of ${old.version}` : ''}. ${v.summary}`, link: { page: 'ai', id: v.id } })
+        notifyRoles(actions, state, ['owner', 'manager', 'coordinator'], { kind: 'ai', title: `Playbook ${v.version} is live`, body: `The AI now replies using ${v.version}${old ? ` instead of ${old.version}` : ''}. ${v.summary}`, link: { page: 'ai', id: v.id } })
         actions.toast(`${v.version} is live. The AI uses it for every new reply.`, 'success')
         break
       }
@@ -174,7 +174,7 @@ function VersionDetail({ v, live, editing, setEditing, onNewDraft, onSelect }: {
           y.status = 'live'
           pushAudit(d, 'playbook.rollback', { id: prev.id, label: `Playbook ${prev.version}` }, `Rolled back from ${v.version} to ${prev.version}`, reason)
         })
-        actions.notify({ roles: ['owner', 'manager', 'coordinator'] }, { kind: 'ai', title: `Playbook rolled back to ${prev.version}`, body: `${userName(state, me.id)}: ${reason}`, link: { page: 'ai', id: prev.id } })
+        notifyRoles(actions, state, ['owner', 'manager', 'coordinator'], { kind: 'ai', title: `Playbook rolled back to ${prev.version}`, body: `${userName(state, me.id)}: ${reason}`, link: { page: 'ai', id: prev.id } })
         onSelect(prev.id)
         actions.toast(`Rolled back. ${prev.version} is live again; ${v.version} is retired.`, 'warn')
         break
@@ -287,7 +287,7 @@ function VersionDetail({ v, live, editing, setEditing, onNewDraft, onSelect }: {
               {view === 'compare' && (
                 <span className="row wrap" style={{ gap: 12 }}>
                   <span className="tiny muted">{[counts.changed && `${counts.changed} changed`, counts.added && `${counts.added} new`, counts.removed && `${counts.removed} removed`, counts.same && `${counts.same} unchanged`].filter(Boolean).join(' · ')}</span>
-                  <Toggle checked={onlyChanges} onChange={setOnlyChanges} label="Only changes" />
+                  {counts.same > 0 && <Toggle checked={onlyChanges} onChange={setOnlyChanges} label="Only changes" />}
                 </span>
               )}
             </div>

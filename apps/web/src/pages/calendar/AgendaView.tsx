@@ -2,7 +2,7 @@
 import type { Appointment, DemoState } from '../../lib/types'
 import { ms, useNow } from '../../lib/time'
 import { UserAvatar } from '../../components/ui'
-import { STATUS_LABEL, addDays, apptLine, apptMinutes, clientOf, durationLabel, fullDay, hm, isSameDay, relativeDay } from './helpers'
+import { STATUS_LABEL, addDays, apptLine, apptMinutes, clientOf, durationLabel, fullDay, hm, isSameDay, mediumDay, relativeDay } from './helpers'
 import { ApptMarks, StatusChip } from './parts'
 
 export function AgendaView({ state, from, days, appts, selectedId, symbol, onOpen, onPickDay }: {
@@ -37,9 +37,10 @@ export function AgendaView({ state, from, days, appts, selectedId, symbol, onOpe
             <header className="ca-agenda-head">
               <button type="button" className="ca-agenda-daylink" onClick={() => onPickDay(d)} aria-label={`Open ${label} in the day view`}>
                 {rel && <span className="ca-agenda-rel">{rel}</span>}
-                <span>{label}</span>
+                <span className="ca-date-long">{label}</span>
+                <span className="ca-date-short" aria-hidden="true">{mediumDay(d)}</span>
               </button>
-              <span className="muted small num">{live.length} booked</span>
+              <span className="muted small num ca-nowrap">{live.length} booked</span>
             </header>
             <ul className="ca-agenda-list">
               {items.map(a => {

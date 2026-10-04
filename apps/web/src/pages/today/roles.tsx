@@ -10,8 +10,9 @@ import { topSources } from '../analytics/data'
 import { fmtInt, fmtPct, plural } from '../analytics/format'
 import { COLOR } from '../analytics/charts'
 import { Deadline } from './parts'
+import { ageCheck } from '../calendar/helpers'
 import {
-  APPT_TYPE, MODE_HINT, MODE_LABEL, MODE_TONE, PAYMENT_KIND, STATUS_LABEL, STATUS_TONE, clientName, isOverdue, lastClientText, openPayments, procedureLine,
+  APPT_TYPE, MODE_HINT, MODE_LABEL, MODE_TONE, PAYMENT_KIND, STATUS_LABEL, STATUS_TONE, apptWhat, clientName, isOverdue, lastClientText, openPayments,
 } from './compute'
 
 // ---- owner / manager: team SLA -------------------------------------------------------------------
@@ -178,7 +179,7 @@ export function ClinicList() {
                       <span className="strong truncate">{clientName(state, a.clientId)}</span>
                       <Chip tone={STATUS_TONE[a.status]}>{STATUS_LABEL[a.status]}</Chip>
                     </span>
-                    <span className="small">{APPT_TYPE[a.type]}{procedureLine(state, a) ? ` · ${procedureLine(state, a)}` : a.notes ? ` · ${a.notes}` : ''}</span>
+                    <span className="small">{apptWhat(state, a)}</span>
                     {can('clinical.view')
                       ? note ? <span className="tiny muted td-clamp">Last note ({shortDate(note.at)}): {note.text}</span> : <span className="tiny faint">No clinical notes yet</span>
                       : <Locked>Clinical notes are restricted</Locked>}
@@ -283,7 +284,7 @@ export function PaymentsDue() {
                     <button type="button" className="td-link strong truncate" onClick={() => actions.go('client', pay.clientId)}>{clientName(state, pay.clientId)}</button>
                     <Chip tone={late ? 'danger' : 'warn'} icon={late ? 'alert' : 'clock'}>{late ? 'Overdue' : 'Due'}</Chip>
                   </span>
-                  <span className="tiny muted">{PAYMENT_KIND[pay.kind]} · {late ? `was due ${shortDate(pay.dueAt)}` : `due ${dateTime(pay.dueAt)}`}</span>
+                  <span className="tiny muted">{PAYMENT_KIND[pay.kind]} · <span className="td-nowrap">{late ? `was due ${shortDate(pay.dueAt)}` : `due ${dateTime(pay.dueAt)}`}</span></span>
                 </span>
                 {can('payments.take') && (
                   <span className="td-item-trail td-actions">
@@ -384,6 +385,8 @@ export function Arrivals() {
           {today.map(a => {
             const late = a.status !== 'arrived' && ms(a.start) + 15 * MIN < now
             const practitioner = state.users.find(u => u.id === a.practitionerId)
+            const client = state.clients.find(c => c.id === a.clientId)
+            const ageBlocked = !!client && ageCheck(state, client, a.procedureId).blocked
             return (
               <li key={a.id} className="td-item td-item-static">
                 <span className="td-item-lead td-slot-time num"><span className="strong">{timeOf(a.start)}</span><span className="tiny muted">{APPT_TYPE[a.type]}</span></span>
@@ -396,7 +399,9 @@ export function Arrivals() {
                   <span className="tiny muted">With {practitioner?.name ?? 'a clinician'} · {state.rooms.find(r => r.id === a.roomId)?.name ?? 'room to confirm'}</span>
                 </span>
                 <span className="td-item-trail td-actions">
-                  {a.status === 'arrived'
+                  {ageBlocked
+                    ? <Button size="sm" variant="ghost" icon="alert" onClick={() => actions.go('calendar', a.id)}>Age check: open</Button>
+                    : a.status === 'arrived'
                     ? <span className="tiny muted row" style={{ gap: 5 }}><Dot tone="accent" />In reception</span>
                     : <>
                       {late && <Button size="sm" variant="ghost" onClick={() => setNoShow(a)}>No-show</Button>}
@@ -439,14 +444,14 @@ export function Unconfirmed() {
                 <span className="td-item-lead td-slot-time num"><span className="strong">{timeOf(a.start)}</span><span className="tiny muted">{new Date(a.start).toDateString() === new Date(now).toDateString() ? 'Today' : 'Tomorrow'}</span></span>
                 <span className="td-item-main">
                   <span className="td-item-title"><span className="strong truncate">{client?.name ?? 'Unknown client'}</span>{a.deposit === 'due' && <Chip tone="warn" icon="card">Deposit due</Chip>}</span>
-                  <span className="tiny muted">{APPT_TYPE[a.type]}{procedureLine(state, a) ? ` · ${procedureLine(state, a)}` : ''} · reminders {a.reminders.d2 || a.reminders.d1 ? 'sent' : 'not sent yet'}{client && !client.consent.whatsapp ? ' · no WhatsApp consent' : ''}</span>
+                  <span className="tiny muted">{apptWhat(state, a, false)} · reminders {a.reminders.d2 || a.reminders.d1 ? 'sent' : 'not sent yet'}{client && !client.consent.whatsapp ? ' · no WhatsApp consent' : ''}</span>
                 </span>
                 <span className="td-item-trail td-actions">
-                  <Button size="sm" variant="secondary" icon="check" onClick={() => {
+                  {client && ageCheck(state, client, a.procedureId).blocked ? <Button size="sm" variant="ghost" icon="alert" onClick={() => actions.go('calendar', a.id)}>Age check: open</Button> : <Button size="sm" variant="secondary" icon="check" onClick={() => {
                     actions.setAppointmentStatus(a.id, 'confirmed')
                     actions.update(d => { const x = d.appointments.find(y => y.id === a.id); if (x) x.reminders.confirmedVia = 'phone' })
                     actions.toast(`${client?.name ?? 'Appointment'} confirmed for ${timeOf(a.start)}`, 'success')
-                  }}>Mark confirmed</Button>
+                  }}>Mark confirmed</Button>}
                 </span>
               </li>
             )

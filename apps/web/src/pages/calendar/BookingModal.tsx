@@ -10,7 +10,7 @@ import { Avatar, Button, Chip, Field, Modal, ReasonDialog, Segmented, StageBadge
 import { Icon } from '../../components/icons'
 import {
   DAY_END_MIN, TIME_OPTIONS, TYPE_LABEL, ageCheck, clashLines, combine, dateInput, durationLabel, findClashes, firstName, hasClash, hm, mediumDay,
-  minutesOfDay, parseDateInput, planItemFor, procOf, timeInput,
+  midSentence, minutesOfDay, parseDateInput, planItemFor, procOf, timeInput,
 } from './helpers'
 
 export interface BookingPreset {
@@ -163,6 +163,8 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
   const practitioner = state.users.find(u => u.id === practitionerId)
   const age = client ? ageCheck(state, client, procedureId) : undefined
   const blocked = !!age?.blocked
+  // An under-18 block locks the whole form; a treatment age limit only blocks that treatment, so it can be changed.
+  const clientBlocked = blocked && age?.scope === 'client'
   const past = !Number.isNaN(startMs) && startMs < Date.now() - 5 * MIN
   const bookingToday = dayMs != null && dayMs === new Date(new Date().setHours(0, 0, 0, 0)).getTime()
   const lateFinish = !Number.isNaN(startMs) && minutesOfDay(startMs) + duration > DAY_END_MIN
@@ -230,7 +232,7 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
         reason: overrideReason,
       })
     }
-    const what = type === 'session' ? `${proc?.name ?? 'Session'} session ${sessionNo}` : type === 'consultation' ? `consultation${proc ? ` for ${proc.name.toLowerCase()}` : ''}` : 'follow-up'
+    const what = type === 'session' ? `${proc?.name ?? 'Session'} session ${sessionNo}` : type === 'consultation' ? `consultation${proc ? ` for ${midSentence(proc.name)}` : ''}` : 'follow-up'
     actions.toast(`Booked ${firstName(client.name)}'s ${what}: ${mediumDay(startMs)}, ${hm(startMs)} with ${practitioner?.name ?? 'the clinician'}.`, 'success')
     onBooked(id, startMs, { practitionerId, branchId: room.branchId })
     onClose()
@@ -242,9 +244,9 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
     <>
       <Modal open={open && !overrideOpen} onClose={onClose} width={640}
         title={preset.title ?? 'New booking'}
-        description={client ? `${state.branches.find(b => b.id === client.branchId)?.name ?? ''} client. Reminders go out 2 days and 1 day before${client.doNotContact ? ', unless they asked not to be contacted' : client.consent.whatsapp ? ' on WhatsApp' : client.consent.sms ? ' by SMS' : ''}.` : 'Search for the client first, then choose the time.'}
+        description={client ? `${state.branches.find(b => b.id === client.branchId)?.name ?? ''} client. ${client.doNotContact ? 'They asked not to be contacted, so no reminders are sent.' : !client.phone ? 'No phone number on file, so no reminders are sent.' : client.consent.whatsapp ? 'Reminders go out 2 days and 1 day before on WhatsApp.' : client.consent.sms ? 'Reminders go out 2 days and 1 day before by SMS.' : 'No WhatsApp or SMS consent, so no reminders are sent; call to confirm.'}` : 'Search for the client first, then choose the time.'}
         footer={<>
-          <span className="ca-modal-summary small muted truncate">{canSubmit ? summary : problems[0] ?? (blocked ? 'Booking is blocked for this client.' : '')}</span>
+          <span className="ca-modal-summary small muted truncate">{canSubmit ? summary : problems[0] ?? (clientBlocked ? 'Booking is blocked for this client.' : blocked ? `Blocked: ${age?.title}` : '')}</span>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           {clash && canSubmit
             ? <Button variant="danger" icon="alert" onClick={() => setOverrideOpen(true)}>Book anyway…</Button>
@@ -305,12 +307,12 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
               <div className="stack" style={{ gap: 4 }}>
                 <strong>{age.title}</strong>
                 <span className="small">{age.detail}</span>
-                <span className="small">If this is wrong, check photo ID in person and record it on the client record. Only then can a booking be made.</span>
+                <span className="small">{clientBlocked ? 'If this is wrong, check photo ID in person and record it on the client record. Only then can a booking be made.' : 'Choose another treatment below, or book this one once they are old enough.'}</span>
               </div>
             </div>
           )}
 
-          <fieldset className="ca-fieldset" disabled={blocked || !client}>
+          <fieldset className="ca-fieldset" disabled={clientBlocked || !client}>
             <legend className="sr-only">Appointment details</legend>
             <div className="stack lg">
               <div className="stack" style={{ gap: 6 }}>

@@ -7,13 +7,16 @@ import { DAY, MIN, ago, iso, money, ms, until, useNow } from '../../lib/time'
 import { Button, Chip, Drawer, Field, KeyValue, Locked, Progress, ReasonDialog, UserAvatar, type Tone } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import {
-  TIME_OPTIONS, TYPE_LABEL, addDays, apptMinutes, clashLines, clientOf, combine, dateInput, durationLabel, findClashes, firstName, fullDay, hasClash, hm,
-  isSameDay, mediumDay, parseDateInput, planItemFor, procOf, sessionInfo, timeInput,
+  TIME_OPTIONS, TYPE_LABEL, addDays, ageCheck, apptMinutes, clashLines, clientOf, combine, dateInput, durationLabel, findClashes, firstName, fullDay, hasClash, hm,
+  isSameDay, mediumDay, midSentence, parseDateInput, planItemFor, procOf, sessionInfo, timeInput,
 } from './helpers'
 import { StatusChip } from './parts'
 import type { BookingPreset } from './BookingModal'
 
 const TYPE_TONE: Record<Appointment['type'], Tone> = { consultation: 'team', session: 'accent', follow_up: 'ok' }
+
+/** Demo auto-replies ("YES" on WhatsApp) still waiting to arrive, so repeat reminders or a manual confirm never fake a reply. */
+const pendingYes = new Set<string>()
 
 /** Mirrors the store: the rebook task goes to the front desk on shift, else a coordinator. */
 function rebookOwner(s: DemoState): User | undefined {
@@ -72,6 +75,10 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   const clinicians = state.users.filter(u => u.role === 'clinician' && u.status === 'active')
 
   const closed = a.status === 'cancelled' || a.status === 'no_show'
+  // Same hard rule as booking: someone who may be under 18 (or under the treatment's minimum age) cannot be
+  // confirmed, moved, treated or rebooked. Cancel and no-show stay available.
+  const age = client ? ageCheck(state, client, a.procedureId) : undefined
+  const ageBlocked = !!age?.blocked
   const when = a.status === 'cancelled' ? 'Cancelled' : a.status === 'no_show' ? 'Did not attend' : a.status === 'completed' ? (endMs < now ? `Completed · ended ${ago(a.end, now)}` : 'Completed')
     : inProgress ? 'Happening now' : started ? `Started ${ago(a.start, now)}` : `Starts ${until(a.start, now)}`
 
@@ -90,6 +97,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   }
 
   const confirm = () => {
+    pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'confirmed')
     actions.update(d => {
       const x = d.appointments.find(y => y.id === a.id)
@@ -99,6 +107,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   }
 
   const arrive = () => {
+    pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'arrived')
     actions.toast(`${first} is in clinic. ${prac ? `${prac.name} can see them in the diary.` : ''}`, 'success')
   }
@@ -118,7 +127,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
       actions.audit({ action: 'plan.session_done', target: { type: 'plan', id: planHit.plan.id, label: client?.name }, detail: `${proc?.name ?? 'Treatment'} session ${a.sessionNo} of ${planHit.item.sessionsTotal} marked done from the calendar` })
       const remaining = planHit.item.sessions.filter(s => s.no !== a.sessionNo && s.status !== 'done' && s.status !== 'skipped').length
       actions.toast(remaining === 0
-        ? `Session ${a.sessionNo} done. That completes ${first}'s ${proc?.name.toLowerCase() ?? 'course'}.`
+        ? `Session ${a.sessionNo} done. That completes ${first}'s ${proc ? midSentence(proc.name) : 'course'}.`
         : `Session ${a.sessionNo} of ${planHit.item.sessionsTotal} marked done on ${first}'s plan. ${remaining} to go.`, 'success')
     } else if (a.type === 'session') {
       actions.toast(`Session completed. ${first} has no treatment plan with this treatment, so no plan was updated.`, 'info')
@@ -129,12 +138,14 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
 
   const noShow = (reason: string) => {
     const owner = rebookOwner(state)
+    pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'no_show', reason || undefined)
     releasePlanSession()
     actions.toast(`Marked as a no-show. ${owner ? `${owner.name} has a task to rebook ${first}.` : 'A rebook task was created.'}`, 'warn', { label: 'Open tasks', page: 'tasks' })
   }
 
   const cancel = (reason: string) => {
+    pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'cancelled', reason)
     releasePlanSession()
     actions.toast(`Appointment cancelled and the slot is free.${a.deposit === 'paid' ? ' The deposit stays on account until finance decides on a refund.' : ''}`, 'info')
@@ -147,8 +158,8 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
       return
     }
     const channel = client.consent.whatsapp ? 'WhatsApp' : client.consent.sms ? 'SMS' : null
-    if (!channel) {
-      actions.toast(`${first} has not agreed to WhatsApp or SMS. Call them instead.`, 'warn')
+    if (!channel || !client.phone) {
+      actions.toast(!client.phone ? `${first} has no phone number on file, so no reminder can be sent. Message them in their chat instead.` : `${first} has not agreed to WhatsApp or SMS. Call them instead.`, 'warn')
       return
     }
     const daysAway = (startMs - Date.now()) / DAY
@@ -160,9 +171,11 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
     actions.audit({ action: 'appointment.reminder', target: { type: 'appointment', id: a.id, label: client.name }, detail: `${flag === 'd2' ? 'D-2' : 'D-1'} reminder sent now by ${channel}` })
     actions.toast(`${channel} reminder sent to ${client.name} for ${mediumDay(startMs)} at ${hm(startMs)}.`, 'success')
     // Demo: an unconfirmed client replies "Yes" on WhatsApp a few seconds later.
-    if (a.status === 'unconfirmed' && channel === 'WhatsApp') {
+    if (a.status === 'unconfirmed' && channel === 'WhatsApp' && !pendingYes.has(a.id)) {
       const id = a.id, name = client.name
+      pendingYes.add(id)
       window.setTimeout(() => {
+        if (!pendingYes.delete(id)) return // confirmed, moved or cancelled in the meantime
         actions.update(d => {
           const x = d.appointments.find(y => y.id === id)
           if (!x || x.status !== 'unconfirmed') return
@@ -215,7 +228,9 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   const newStart = mDay != null ? combine(mDay, mTime) : NaN
   const newEnd = newStart + minutes * MIN
   const movePast = !Number.isNaN(newStart) && newStart < Date.now()
-  const unchanged = newStart === startMs && mPrac === a.practitionerId && mRoom === a.roomId
+  // Minute resolution: stored times can carry seconds after the demo clock is shifted on reload.
+  const sameTime = Math.abs(newStart - startMs) < MIN
+  const unchanged = sameTime && mPrac === a.practitionerId && mRoom === a.roomId
   const moveClashes = mode === 'move' && !Number.isNaN(newStart) ? findClashes(state, { start: newStart, end: newEnd, practitionerId: mPrac, roomId: mRoom, clientId: a.clientId, excludeId: a.id }) : undefined
   const moveClash = moveClashes ? hasClash(moveClashes) : false
   const moveClashText = moveClashes && moveClash ? clashLines(state, moveClashes, mPrac, mRoom) : []
@@ -225,6 +240,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
     const newRoom = state.rooms.find(r => r.id === mRoom)
     const fromText = `${mediumDay(startMs)} ${hm(startMs)}`
     const toText = `${mediumDay(newStart)} ${hm(newStart)}`
+    if (!sameTime) pendingYes.delete(a.id)
     actions.update(d => {
       const x = d.appointments.find(y => y.id === a.id)
       if (!x) return
@@ -233,7 +249,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
       x.practitionerId = mPrac
       x.roomId = mRoom
       if (newRoom) x.branchId = newRoom.branchId
-      if (newStart !== startMs) {
+      if (!sameTime) {
         x.status = 'unconfirmed'
         x.reminders = { d2: false, d1: false }
       }
@@ -242,13 +258,13 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
       })))
     })
     const changes = [
-      newStart !== startMs ? `${fromText} → ${toText}` : null,
+      !sameTime ? `${fromText} → ${toText}` : null,
       mPrac !== a.practitionerId ? `practitioner ${userName(state, a.practitionerId)} → ${userName(state, mPrac)}` : null,
       mRoom !== a.roomId ? `room ${room?.name ?? ''} → ${newRoom?.name ?? ''}` : null,
     ].filter(Boolean).join('; ')
     actions.audit({ action: reason ? 'appointment.rescheduled_double_booked' : 'appointment.rescheduled', target: { type: 'appointment', id: a.id, label: client?.name }, detail: changes, reason })
     setMode('view')
-    actions.toast(newStart !== startMs
+    actions.toast(!sameTime
       ? `Moved to ${toText}. ${first} needs to confirm the new time, so send a reminder.`
       : 'Appointment updated.', 'success')
   }
@@ -286,12 +302,13 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
     footer = (
       <div className="ca-dr-actions">
         <div className="ca-dr-actions-secondary">
-          {open && <Button size="sm" variant="ghost" icon="calendar" onClick={startMove}>Reschedule</Button>}
+          {open && !ageBlocked && <Button size="sm" variant="ghost" icon="calendar" onClick={startMove}>Reschedule</Button>}
           {open && started && <Button size="sm" variant="ghost" icon="x" onClick={() => setDialog('noshow')}>No-show</Button>}
           {open && <Button size="sm" variant="ghost" icon="trash" onClick={() => setDialog('cancel')}>Cancel</Button>}
           {a.status === 'arrived' && <Button size="sm" variant="ghost" icon="x" onClick={() => setDialog('noshow')}>Left without treatment</Button>}
         </div>
-        <div className="ca-dr-actions-primary">
+        {ageBlocked && !open && a.status !== 'arrived' && <span className="small muted">No further actions until the client's age is checked.</span>}
+        {!ageBlocked && <div className="ca-dr-actions-primary">
           {open && !started && <Button size="sm" variant="secondary" icon="bell" onClick={sendReminder}>Send reminder now</Button>}
           {a.status === 'unconfirmed' && <Button size="sm" variant={isToday ? 'secondary' : 'primary'} icon="check" onClick={confirm}>Confirm</Button>}
           {open && isToday && <Button size="sm" variant="primary" icon="pin" onClick={arrive}>Mark arrived</Button>}
@@ -299,7 +316,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
           {a.status === 'completed' && a.type === 'session' && nextSession && <Button size="sm" variant="primary" icon="plus" onClick={bookNext}>Book session {nextSession.no}</Button>}
           {a.status === 'completed' && !(a.type === 'session' && nextSession) && <Button size="sm" variant="secondary" icon="plus" onClick={bookFollowUp}>Book a follow-up</Button>}
           {(a.status === 'no_show' || a.status === 'cancelled') && <Button size="sm" variant="primary" icon="refresh" onClick={rebook}>Rebook {first}</Button>}
-        </div>
+        </div>}
       </div>
     )
   }
@@ -384,6 +401,16 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
                 <p className="ca-note small ca-note-ok"><Icon name="check" size={14} />{userName(state, mPrac)} and {state.rooms.find(r => r.id === mRoom)?.name} are free {hm(newStart)}–{hm(newEnd)}.</p>
               ) : null}
             </section>
+          )}
+
+          {ageBlocked && age && a.status !== 'cancelled' && (
+            <div className="ca-callout ca-callout-danger" role="alert">
+              <Icon name="shield" size={16} />
+              <div className="stack" style={{ gap: 2 }}>
+                <strong className="small">{age.title}</strong>
+                <span className="small">{open || a.status === 'arrived' ? 'This appointment cannot be confirmed, moved or treated. Cancel it and let the client know.' : age.detail}</span>
+              </div>
+            </div>
           )}
 
           {open && started && !inProgress && canManage && mode === 'view' && (
