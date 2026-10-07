@@ -33,11 +33,38 @@ jobs:
       - name: Skip deploy when Cloudflare secrets are missing
         if: env.CLOUDFLARE_API_TOKEN == ''
         run: echo "::notice::Built OK. Add the CLOUDFLARE_API_TOKEN repository secret to deploy."
+      - name: Make sure the account has a workers.dev name
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        run: |
+          api=https://api.cloudflare.com/client/v4
+          auth="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          acct=$(curl -fsS -H "$auth" "$api/accounts?per_page=5" | jq -r '.result[0].id')
+          echo "::add-mask::$acct"
+          echo "CLOUDFLARE_ACCOUNT_ID=$acct" >> "$GITHUB_ENV"
+          current=$(curl -sS -H "$auth" "$api/accounts/$acct/workers/subdomain" | jq -r '.result.subdomain // empty')
+          if [ -n "$current" ]; then echo "workers.dev name already set: $current"; exit 0; fi
+          for name in "lead-manager-$RANDOM" "lead-manager-$RANDOM$RANDOM"; do
+            res=$(curl -sS -X PUT -H "$auth" -H 'Content-Type: application/json' --data "{\"subdomain\":\"$name\"}" "$api/accounts/$acct/workers/subdomain")
+            if echo "$res" | jq -e '.success' >/dev/null; then echo "Registered $name.workers.dev"; exit 0; fi
+            echo "Could not register $name: $(echo "$res" | jq -c '.errors')"
+          done
+          echo "::error::Could not register a workers.dev name. Open Workers & Pages in the Cloudflare dashboard once and pick one."
+          exit 1
       - name: Deploy to Cloudflare Workers
         if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           set -o pipefail
           npx wrangler deploy 2>&1 | tee deploy.log
           url=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "LIVE_URL=$url" >> "$GITHUB_ENV"
           echo "::notice title=Live site::${url:-deployed (see log for the address)}"
           echo "### Live site: ${url:-see the deploy log}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check the live site loads
+        if: env.LIVE_URL != ''
+        run: |
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$LIVE_URL/" || true)
+            if [ "$code" = "200" ] && curl -s "$LIVE_URL/" | grep -q '<title>Lead Manager</title>'; then echo "Live and serving the app: $LIVE_URL"; exit 0; fi
+            echo "Attempt $i: HTTP $code (a new workers.dev name can take a few minutes to go live)"; sleep 10
+          done
+          echo "::warning::Deployed, but $LIVE_URL did not answer yet. A new workers.dev name can take a few more minutes."
