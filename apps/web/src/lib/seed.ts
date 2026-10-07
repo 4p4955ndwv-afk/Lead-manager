@@ -7,7 +7,7 @@ import type {
 import { STAGES } from './types'
 import { DAY, HOUR, MIN, iso, startOfDay, uid } from './time'
 
-export const SEED_VERSION = 5
+export const SEED_VERSION = 6
 
 // deterministic pseudo-random so the demo looks the same on every reset
 function rng(seedNum: number) {
@@ -304,7 +304,8 @@ export function seed(): DemoState {
     ['plan'], ['plan'], ['treatment'], ['treatment'], ['treatment'], ['aftercare'], ['aftercare'], ['alumni'], ['alumni'], ['qualifying', 'spam'], ['booked'], ['plan', 'lost'], ['treatment'], ['contact'],
   ]
   const LOST_REASONS = ['Price too high', 'Chose a clinic closer to home', 'Went quiet after the call', 'Booked elsewhere']
-  const SOURCES = ['Reel: "6 sessions, smooth for good"', 'TikTok: "Laser myths busted"', 'TikTok: "FUE day in the clinic"', 'Story reply: "Glow week offer"', 'Reel: "PRP explained in 30 seconds"', 'Comment on post: "Laser FAQ"']
+  const IG_SOURCES = ['Reel: "6 sessions, smooth for good"', 'Story reply: "Glow week offer"', 'Reel: "PRP explained in 30 seconds"', 'Comment on post: "Laser FAQ"']
+  const TT_SOURCES = ['TikTok: "Laser myths busted"', 'TikTok: "FUE day in the clinic"', 'TikTok: "Skin booster before/after explained"']
   FIRST.forEach((fn, i) => {
     const [stage, exit] = STAGE_POOL[i % STAGE_POOL.length]
     const id = `cl_f${i + 1}`
@@ -319,7 +320,7 @@ export function seed(): DemoState {
       id, name: `${fn} ${LAST[i]}`, handles: channel === 'tiktok' ? { tiktok: '@' + handle } : { instagram: '@' + handle }, phone: hasPhone ? `+447700900${String(300 + i * 7).padStart(3, '0')}` : undefined,
       language: i % 9 === 4 ? 'ar' : i % 11 === 6 ? 'es' : 'en', ageVerified: STAGES.indexOf(stage) >= STAGES.indexOf('consultation'), tags: i % 5 === 0 ? ['VIP'] : i % 7 === 0 ? ['Referral'] : [],
       consent: consent(hasPhone, hasPhone, stage === 'alumni'), doNotContact: false, ownerId: hasPhone ? owner : undefined, branchId: i % 4 === 3 ? 'b2' : 'b1',
-      source: { channel, detail: SOURCES[i % SOURCES.length] }, createdAt: created, score: Math.round(30 + r() * 65),
+      source: { channel, detail: channel === 'tiktok' ? TT_SOURCES[i % TT_SOURCES.length] : IG_SOURCES[i % IG_SOURCES.length] }, createdAt: created, score: Math.round(30 + r() * 65),
     })
     const path = STAGES.slice(0, STAGES.indexOf(stage) + 1)
     const ep: Episode = {
@@ -366,10 +367,21 @@ export function seed(): DemoState {
   })
 
   // appointments around this week
-  const appt = (id: string, clientId: string, type: Appointment['type'], day: number, hh: number, mm: number, dur: number, practitionerId: string, roomId: string, status: Appointment['status'], extra: Partial<Appointment> = {}): Appointment => ({
-    id, clientId, episodeId: (clientId.replace('cl_', 'ep_')) + (clientId === 'cl_hana' ? '_2' : ''), type, practitionerId, roomId, branchId: 'b1', start: at(day, hh, mm), end: iso(Date.parse(at(day, hh, mm)) + dur * MIN), status,
+  // today's statuses follow the clock: finished visits are completed, current ones arrived, later ones not yet
+  const todayStatus = (start: number, end: number, planned: Appointment['status']): Appointment['status'] => {
+    if (planned === 'no_show' || planned === 'cancelled') return planned
+    if (end <= now()) return 'completed'
+    if (start - 15 * MIN <= now()) return 'arrived'
+    return planned === 'completed' || planned === 'arrived' ? 'confirmed' : planned
+  }
+  const appt = (id: string, clientId: string, type: Appointment['type'], day: number, hh: number, mm: number, dur: number, practitionerId: string, roomId: string, planned: Appointment['status'], extra: Partial<Appointment> = {}): Appointment => {
+    const start = Date.parse(at(day, hh, mm))
+    const status = day === 0 ? todayStatus(start, start + dur * MIN, planned) : planned
+    return ({
+    id, clientId, episodeId: (clientId.replace('cl_', 'ep_')) + (clientId === 'cl_hana' ? '_2' : ''), type, practitionerId, roomId, branchId: 'b1', start: at(day, hh, mm), end: iso(start + dur * MIN), status,
     deposit: 'none', reminders: { d2: day >= 2 ? false : true, d1: day >= 1 ? day === 1 : true, confirmedVia: status === 'confirmed' ? 'whatsapp' : undefined }, ...extra,
   })
+  }
   appointments.push(
     appt('ap_ella5', 'cl_ella', 'session', 0, 9, 30, 45, 'u_cl1', 'r3', 'completed', { procedureId: 'p_lhr', sessionNo: 5 }),
     appt('ap_noah2', 'cl_noah', 'session', 0, 11, 0, 60, 'u_cl1', 'r1', 'arrived', { procedureId: 'p_prp', sessionNo: 2 }),
@@ -404,6 +416,15 @@ export function seed(): DemoState {
     { id: 'pl_hana1', episodeId: 'ep_hana_1', clientId: 'cl_hana', status: 'completed', discount: 0, paymentPlan: { type: 'full' }, consentSigned: true, createdBy: 'u_cl1', createdAt: agoD(740),
       items: [{ id: 'pi_hana1', procedureId: 'p_lhr', sessionsTotal: 6, price: 900, addedAt: agoD(740), sessions: sess(6, 6, [], 730, 30) }] },
   )
+
+  // plan sessions agree with today's appointment statuses
+  for (const ap of appointments.filter(a => a.type === 'session' && a.sessionNo)) {
+    const item = plans.filter(pl => pl.episodeId === ap.episodeId).flatMap(pl => pl.items).find(it => it.procedureId === ap.procedureId)
+    const sess = item?.sessions.find(x => x.no === ap.sessionNo)
+    if (!sess) continue
+    sess.appointmentId = ap.id
+    if (ap.status === 'completed') { sess.status = 'done'; sess.date = ap.start } else if (ap.status !== 'cancelled' && ap.status !== 'no_show') { sess.status = 'booked'; sess.date = undefined }
+  }
 
   payments.push(
     { id: 'py_noah1', clientId: 'cl_noah', episodeId: 'ep_noah', kind: 'instalment', amount: 1800, status: 'paid', dueAt: agoD(60), paidAt: agoD(60), method: 'card_link' },
@@ -482,12 +503,15 @@ export function seed(): DemoState {
       summary: 'Drafted by Claude from 3,214 past conversations (1,108 converted). Asks for the number earlier and handles price objections the way top performers did.',
       approvals: { manager: { by: 'u_mgr', at: agoD(2) } },
       sections: [
+        { title: 'Tone', body: 'Warm, brief and plain. Mirror the client\'s language and level of formality. One emoji at most, only if they used one. Keep replies under 60 words.' },
         { title: 'What converts (evidence)', body: 'Chats where the number was requested within the first 3 messages converted at 41% vs 19% later. Replies under 2 minutes converted 2.3× better than replies after an hour. Price questions answered with a range plus a consultation offer converted at 38%; answers without a range at 12%.' },
         { title: 'Opening', body: 'Disclose the AI, answer the question in one sentence, then ask one question about timing ("Roughly when were you hoping to start?"). Timing questions outperformed treatment-detail questions.' },
+        { title: 'Qualifying', body: 'Find out which treatment, which area and roughly when they want to start, one question per message. Timing first, then area; skip anything they already told you.' },
+        { title: 'Prices', body: 'Only quote ranges from the approved price list, always with "confirmed at a free consultation", then offer a call in the same message.' },
         { title: 'Price objections', body: 'When someone says it is expensive: acknowledge, mention instalments are available, offer the free consultation. Do not discount in DMs (discount offers converted worse and lowered plan value).' },
         { title: 'Asking for the number', body: 'Ask by the third message: "What\'s the best number for our coordinator to call you on?" If they hesitate, offer a time window instead ("Would after 6pm suit you?").' },
         { title: 'Returning clients', body: 'Recognise returning clients by handle, welcome them back by name and offer the coordinator who looked after them before.' },
-        { title: 'Never', body: 'Same hard rules as v0, plus: never use "permanent", "guaranteed" or "pain-free" (all flagged in past chats).' },
+        { title: 'Never', body: 'Never give medical advice or judge suitability. Never promise results. Never name prescription-only medicines. Never book under-18s. Never pretend to be a named person. Never ask for card details. Never use "permanent", "guaranteed" or "pain-free" (all flagged in past chats).' },
       ],
     },
     {

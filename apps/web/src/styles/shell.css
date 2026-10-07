@@ -56,6 +56,7 @@
 /* demo controls */
 .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .demo-tile { display: grid; gap: 6px; justify-items: start; text-align: left; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; color: var(--ink); }
+.demo-closed { display: grid; gap: 8px; justify-items: start; padding: 12px 14px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); }
 .demo-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
 
 /* command palette */
@@ -89,5 +90,6 @@
   .ai-pill { padding: 0 9px; font-size: 12px; }
 }
 @media (max-width: 420px) {
-  .ai-pill { display: none; }
+  .ai-pill:not(.ai-pill-danger) { display: none; }
+  .ai-pill-danger { padding: 0 8px; }
 }

@@ -5,6 +5,7 @@ import { useStore, userName } from '../../lib/store'
 import type { DemoState } from '../../lib/types'
 import { DAY, ago, iso, ms, shortDate, until, uid } from '../../lib/time'
 import { editExt, getExt, localDay, type DataRequest, type SettingsExt } from './ext'
+import { saveFile } from '../../lib/download'
 
 const RETENTION: Array<{ key: 'chats' | 'clinical' | 'exports'; label: string; hint: string; min: number; max: number }> = [
   { key: 'chats', label: 'Chats with people who never booked', hint: 'DMs, AI drafts and call notes are deleted after this. Clients keep their chats while they have an open plan.', min: 3, max: 120 },
@@ -103,18 +104,7 @@ export function Privacy({ onOpenAudit }: { onOpenAudit?: () => void }) {
       documents: state.documents.filter(x => x.clientId === c.id).map(x => ({ title: x.title, kind: x.kind, at: x.at })),
     } : { person: r.personName, note: 'No matching record in Lead Manager' }
     const json = JSON.stringify(bundle, null, 2)
-    try {
-      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `data-export-${r.personName.toLowerCase().replace(/[^a-z]+/g, '-')}.json`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 2000)
-    } catch {
-      /* downloads may be blocked in previews */
-    }
+    void saveFile(`data-export-${r.personName.toLowerCase().replace(/[^a-z]+/g, '-')}.json`, json, 'application/json')
     markDone(r, `Export prepared (${Math.max(1, Math.round(json.length / 1024))} KB: profile, chats, appointments, plans, payments)`)
     actions.toast(`Export prepared for ${r.personName}. Send it through the secure link; it is deleted after ${ret.exports} month${ret.exports === 1 ? '' : 's'}.`, 'success')
   }

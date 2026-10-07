@@ -202,10 +202,10 @@ export function recentAiMessages(s: DemoState, visible: (c: Conversation) => boo
 }
 
 export const FLAG_LABEL: Record<NonNullable<Message['flags']>[number], string> = {
-  phone_detected: 'Number shared', asked_number: 'Asked for our number', clinical: 'Clinical', minor: 'Possible minor', complaint: 'Complaint', price: 'Price question', opt_out: 'Opt-out',
+  phone_detected: 'Number shared', asked_number: 'Asked for our number', asked_person: 'Asked for a person', clinical: 'Clinical', minor: 'Possible minor', complaint: 'Complaint', price: 'Price question', opt_out: 'Opt-out',
 }
 export const FLAG_TONE: Record<NonNullable<Message['flags']>[number], 'ok' | 'team' | 'danger' | 'warn' | 'info'> = {
-  phone_detected: 'ok', asked_number: 'ok', clinical: 'team', minor: 'danger', complaint: 'danger', price: 'info', opt_out: 'warn',
+  phone_detected: 'ok', asked_number: 'ok', asked_person: 'warn', clinical: 'team', minor: 'danger', complaint: 'danger', price: 'info', opt_out: 'warn',
 }
 
 // ---- playbook versions --------------------------------------------------------------------------

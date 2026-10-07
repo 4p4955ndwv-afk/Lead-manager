@@ -5,7 +5,7 @@ import { useStore } from '../lib/store'
 import { canOpen } from '../lib/permissions'
 import type { PageId } from '../lib/types'
 import { ROLE_LABEL } from '../lib/types'
-import { ago } from '../lib/time'
+import { ago, nextOpening, timeOf, iso } from '../lib/time'
 import { visibleConversations } from '../pages/inbox/helpers'
 import { inMine } from '../pages/tasks/helpers'
 import '../styles/shell.css'
@@ -241,7 +241,16 @@ function RoleSwitcher({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 function DemoControls({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { actions, me } = useStore()
+  const { state, actions, me } = useStore()
+  const opensAt = nextOpening(state.ai.businessHours)
+  const closed = opensAt > Date.now() + 60_000
+  const openAllHours = () => {
+    actions.update(d => {
+      d.ai.businessHours = { start: '00:00', end: '23:59', days: [0, 1, 2, 3, 4, 5, 6] }
+      d.audit.unshift({ id: 'au_demo_' + Date.now(), at: new Date().toISOString(), actor: d.currentUserId, action: 'settings.business_hours', target: { type: 'settings', id: 'ai', label: 'Opening hours' }, detail: 'Opening hours set to 24/7 for the demo' })
+    })
+    actions.toast('The clinic is now open 24/7 for this demo, so new leads get the live 15-minute call clock.', 'success')
+  }
   const run = (channel: 'instagram' | 'tiktok') => {
     const id = actions.simulateNewLead(channel)
     actions.toast(`New ${channel === 'tiktok' ? 'TikTok' : 'Instagram'} DM arriving. Watch the AI reply, then the number handoff.`, 'info', { label: 'Open chat', page: 'inbox', id })
@@ -263,6 +272,12 @@ function DemoControls({ open, onClose }: { open: boolean; onClose: () => void })
             <span className="small muted">AI drafts, staff tap send (co-pilot)</span>
           </button>
         </div>
+        {closed && (
+          <div className="demo-closed">
+            <p className="small"><b>The clinic is closed right now</b> (opens {new Date(opensAt).toLocaleDateString('en-GB', { weekday: 'short' })} {timeOf(iso(opensAt))}). New leads that arrive outside opening hours are due when it opens, so you won't see the live 15-minute clock.</p>
+            <Button size="sm" variant="subtle" icon="clock" onClick={openAllHours}>Open 24/7 for this demo</Button>
+          </div>
+        )}
         <p className="small muted">Tip: switch to <b>Priya Nair (Lead coordinator)</b> to receive the new-lead alert{me.role === 'coordinator' ? ' (you are already her)' : ''}. Leave a call task untouched for 15 minutes to see it escalate to the manager.</p>
         <div className="row between wrap">
           <span className="small muted">Changes are saved in this browser only.</span>

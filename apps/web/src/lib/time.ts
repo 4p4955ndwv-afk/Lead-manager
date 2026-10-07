@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Channel, Conversation } from './types'
 
+/** Display locale for dates and times (the clinic's, so every screen shows the same format). */
+export const LOCALE = 'en-GB'
+
 export const MIN = 60_000
 export const HOUR = 60 * MIN
 export const DAY = 24 * HOUR
@@ -55,13 +58,13 @@ export function countdown(deadlineIso: string, now = Date.now()): { text: string
 }
 
 export function shortDate(isoStr: string): string {
-  return new Date(isoStr).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  return new Date(isoStr).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
 }
 export function longDate(isoStr: string): string {
-  return new Date(isoStr).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(isoStr).toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 export function timeOf(isoStr: string): string {
-  return new Date(isoStr).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+  return new Date(isoStr).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })
 }
 export function dateTime(isoStr: string): string {
   return `${shortDate(isoStr)}, ${timeOf(isoStr)}`
@@ -137,4 +140,22 @@ let seq = 0
 export function uid(prefix: string): string {
   seq = (seq + 1) % 1296
   return `${prefix}_${Date.now().toString(36).slice(-5)}${seq.toString(36).padStart(2, '0')}${Math.random().toString(36).slice(2, 5)}`
+}
+
+/** Opening hours as stored in AI settings: "HH:MM" strings and weekday numbers (0 = Sunday). */
+export interface OpeningHours { start: string; end: string; days: number[] }
+
+/** Returns `from` if the clinic is open then, otherwise the next opening time. */
+export function nextOpening(hours: OpeningHours, from = Date.now()): number {
+  const [sh, sm] = hours.start.split(':').map(Number)
+  const [eh, em] = hours.end.split(':').map(Number)
+  for (let i = 0; i < 8; i++) {
+    const day = new Date(startOfDay(from) + i * DAY)
+    if (!hours.days.includes(day.getDay())) continue
+    const open = day.getTime() + sh * HOUR + sm * MIN
+    const close = day.getTime() + eh * HOUR + em * MIN
+    if (i === 0 && from >= open && from < close) return from
+    if (open > from) return open
+  }
+  return from
 }

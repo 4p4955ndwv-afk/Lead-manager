@@ -234,7 +234,7 @@ export function dailyBrief(s: DemoState, me: User, now: number, can: (p: 'paymen
   return parts.join(' ')
 }
 
-export function claudePrompt(me: User): string {
+export function claudePrompt(me: User, orgName = "the clinic"): string {
   const focus: Record<Role, string> = {
     owner: 'the whole clinic: leads at risk, team SLA, AI performance and revenue',
     manager: 'the team: which calls are at risk of missing the 15-minute window, who is overloaded, and any escalations',
@@ -244,5 +244,5 @@ export function claudePrompt(me: User): string {
     finance: 'payments due and overdue, and what to chase first',
     marketing: 'which posts and videos are bringing leads that book',
   }
-  return `Brief me on today at Northlight Clinic. Focus on ${focus[me.role]}. What changed since yesterday and what should I do first?`
+  return `Brief me on today at ${orgName}. Focus on ${focus[me.role]}. What changed since yesterday and what should I do first?`
 }

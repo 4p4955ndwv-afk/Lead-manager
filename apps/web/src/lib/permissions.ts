@@ -61,9 +61,9 @@ export function canOpen(user: User | undefined, page: PageId): boolean {
     case 'tasks':
       return user.role !== 'marketing'
     case 'calendar':
-      return can(user, 'appointments.manage') || can(user, 'clinical.view')
+      return can(user, 'appointments.manage') || can(user, 'clinical.view') || can(user, 'payments.view') || can(user, 'analytics.view')
     case 'ai':
-      return can(user, 'ai.mode') || can(user, 'playbook.propose') || can(user, 'playbook.approve') || can(user, 'playbook.clinical_signoff')
+      return can(user, 'ai.mode') || can(user, 'playbook.propose') || can(user, 'playbook.approve') || can(user, 'playbook.clinical_signoff') || can(user, 'chats.reply')
     case 'analytics':
       return can(user, 'analytics.view')
     case 'team':

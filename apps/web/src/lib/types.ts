@@ -131,7 +131,7 @@ export interface Message {
   userId?: ID // for human messages
   text: string
   at: ISO
-  flags?: Array<'phone_detected' | 'asked_number' | 'clinical' | 'minor' | 'complaint' | 'price' | 'opt_out'>
+  flags?: Array<'phone_detected' | 'asked_number' | 'asked_person' | 'clinical' | 'minor' | 'complaint' | 'price' | 'opt_out'>
   humanAgentTag?: boolean // Instagram HUMAN_AGENT tag used (human only, up to 7 days)
   status?: 'sent' | 'delivered' | 'read' | 'failed' | 'shadow' // shadow = drafted only, never sent
 }

@@ -233,8 +233,8 @@ export function ageCheck(s: DemoState, client: Client, procedureId?: string): Ag
       scope: 'client',
       title: 'Booking blocked: client may be under 18',
       detail: under18Exit && !dobUnder18
-        ? `${client.name} was marked under 18${under18Exit.exitReason ? ` (“${under18Exit.exitReason}”)` : ''}. Northlight only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`
-        : `${client.name}'s date of birth makes them ${age}. Northlight only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`,
+        ? `${client.name} was marked under 18${under18Exit.exitReason ? ` (“${under18Exit.exitReason}”)` : ''}. The clinic only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`
+        : `${client.name}'s date of birth makes them ${age}. The clinic only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`,
     }
   }
   const proc = procOf(s, procedureId)

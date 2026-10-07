@@ -3,9 +3,9 @@ import type {
   AiMode, Appointment, AuditEntry, CallOutcome, Channel, Conversation, DemoState, Episode, Exit, Message, Notification,
   PageId, Permission, Role, Stage, Task, User,
 } from './types'
-import { STAGES } from './types'
+import { CHANNEL_LABEL, STAGES } from './types'
 import { can as canDo } from './permissions'
-import { DAY, HOUR, MIN, fromNow, iso, ms, shiftTimestamps, uid } from './time'
+import { DAY, HOUR, MIN, fromNow, iso, ms, nextOpening, shiftTimestamps, timeOf, uid } from './time'
 import { callBrief, claudeDraft, detectFlags, extractPhone, ruleDraft } from './ai'
 import { getClaude, claudeErrorText } from './claude'
 import { seed, SEED_VERSION, newLeadScript } from './seed'
@@ -123,9 +123,16 @@ export const userName = (s: DemoState, id: string | undefined | 'ai' | 'system' 
 export const activeEpisode = (s: DemoState, clientId: string): Episode | undefined =>
   s.episodes.filter(e => e.clientId === clientId).sort((a, b) => b.number - a.number)[0]
 
-function onShift(s: DemoState, role: Role): User | undefined {
+/** Someone with this role who is on shift; with `strict` false, any active person with the role as a fallback. */
+function onShift(s: DemoState, role: Role, strict = false): User | undefined {
   const pool = s.users.filter(u => u.role === role && u.status === 'active')
-  return pool.find(u => u.onShift) ?? pool[0]
+  return pool.find(u => u.onShift) ?? (strict ? undefined : pool[0])
+}
+
+/** The SLA rule for new leads, from Settings → Notifications & SLAs. */
+function leadRule(s: DemoState) {
+  const r = s.settings.slaRules.find(x => x.id === 'sla_1')
+  return { enabled: r?.enabled ?? true, first: r?.escalateAfterMin[0] ?? 15, second: r?.escalateAfterMin[1] ?? 60 }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -212,10 +219,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       if (phone) client.phone = phone
       if (ep && !ep.exit && STAGES.indexOf(ep.stage) < STAGES.indexOf('contact')) doMoveStage(d, ep.id, 'contact', { by: 'ai', reason: phone ? 'Phone number shared in DM' : 'Asked for the clinic number' })
-      const coordinator = (client.ownerId && d.users.find(u => u.id === client.ownerId && u.onShift)) || onShift(d, 'coordinator')!
-      client.ownerId = coordinator.id
+      const owner = client.ownerId ? d.users.find(u => u.id === client.ownerId && u.onShift && u.status === 'active') : undefined
+      const coordinatorOnShift = owner ?? onShift(d, 'coordinator', true)
+      const coordinator = coordinatorOnShift ?? onShift(d, 'manager', true) ?? onShift(d, 'owner')!
+      if (coordinator.role === 'coordinator') client.ownerId = coordinator.id
       const existing = d.tasks.find(t => t.clientId === client.id && t.type === 'call' && t.status === 'open')
       if (existing) return
+      const rule = leadRule(d)
+      const opensAt = nextOpening(d.ai.businessHours)
+      const outOfHours = opensAt > Date.now() + MIN
+      const startAt = outOfHours ? opensAt : Date.now()
+      const sla = phone && rule.enabled ? rule.first : undefined
       const task: Task = {
         id: uid('tk'),
         type: 'call',
@@ -224,8 +238,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         episodeId: ep?.id,
         assignedTo: coordinator.id,
         createdAt: iso(Date.now()),
-        dueAt: fromNow(phone ? 15 * MIN : 4 * HOUR),
-        slaMinutes: phone ? 15 : undefined,
+        dueAt: iso(startAt + (phone ? (sla ?? rule.first) * MIN : 4 * HOUR)),
+        slaMinutes: sla,
         escalationLevel: 0,
         status: 'open',
         attempts: [],
@@ -233,7 +247,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         priority: phone ? 'urgent' : 'normal',
       }
       d.tasks.unshift(task)
-      conv.messages.push({ id: uid('ms'), author: 'system', text: phone ? `Lead created. ${coordinator.name} has 15 minutes to call.` : `Asked for our number. ${coordinator.name} will watch for their call.`, at: iso(Date.now()) })
+      const who = coordinatorOnShift ? coordinator.name : `No coordinator is on shift, so ${coordinator.name}`
+      const when = outOfHours ? ` once the clinic opens (${new Date(opensAt).toLocaleDateString('en-GB', { weekday: 'short' })} ${timeOf(iso(opensAt))})` : ''
+      conv.messages.push({ id: uid('ms'), author: 'system', text: phone ? `Lead created. ${who} has ${sla ?? rule.first} minutes to call${when}.` : `Asked for our number. ${who} will watch for their call.`, at: iso(Date.now()) })
       pushNotify(d, { userIds: [coordinator.id] }, {
         kind: 'lead',
         title: phone ? `New lead · ${client.name} shared a number` : `${client.name} asked for our number`,
@@ -241,7 +257,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         link: { page: 'tasks', id: task.id },
         deadline: phone ? task.dueAt : undefined,
       })
-      pushAudit(d, { actor: 'ai', action: 'lead.handoff', target: { type: 'client', id: client.id, label: client.name }, detail: phone ? 'Phone detected; call task created (15 min SLA)' : 'Asked for clinic number; expect-call task created' })
+      pushAudit(d, { actor: 'ai', action: 'lead.handoff', target: { type: 'client', id: client.id, label: client.name }, detail: phone ? `Phone detected; call task created (${sla ? sla + ' min SLA' : 'no SLA'}${outOfHours ? ', due at opening' : ''})` : 'Asked for clinic number; expect-call task created' })
     }
 
     /** What the AI does after a client message, depending on mode, flags and kill switch. */
@@ -279,6 +295,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             d.tasks.unshift({ id: uid('tk'), type: 'clinical_review', title: `Clinical question from ${client.name}`, clientId: client.id, episodeId: ep?.id, assignedTo: clin.id, createdAt: iso(Date.now()), dueAt: fromNow(4 * HOUR), escalationLevel: 0, status: 'open', attempts: [], priority: 'high', brief: last.text })
             pushNotify(d, { userIds: [clin.id] }, { kind: 'clinical', title: `Clinical question · ${client.name}`, body: last.text, link: { page: 'inbox', id: conv.id } })
           }
+        }
+        if (flags.includes('asked_person')) {
+          conv.needsHuman = true
+          conv.needsHumanReason = 'Asked for a person'
+          const staff = (client.ownerId && d.users.find(u => u.id === client.ownerId && u.onShift)) || onShift(d, 'coordinator', true) || onShift(d, 'manager')
+          if (staff) pushNotify(d, { userIds: [staff.id] }, { kind: 'escalation', title: `${client.name} asked for a person`, body: last.text, link: { page: 'inbox', id: conv.id } })
         }
         if (flags.includes('complaint')) {
           conv.needsHuman = true
@@ -567,7 +589,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAiMode: (channel, mode, reason) => update(d => {
         const from = d.ai.mode[channel]
         d.ai.mode[channel] = mode
-        pushAudit(d, { action: 'ai.mode', target: { type: 'settings', id: 'ai', label: `${channel} AI mode` }, detail: `${from} → ${mode}`, reason })
+        pushAudit(d, { action: 'ai.mode', target: { type: 'settings', id: 'ai', label: `${CHANNEL_LABEL[channel]} AI mode` }, detail: `${from} → ${mode}`, reason })
       }),
       addNote: (clientId, text, clinical) => update(d => {
         d.notes.unshift({ id: uid('no'), clientId, authorId: d.currentUserId, at: iso(Date.now()), text, clinical })
@@ -592,7 +614,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const s = stateRef.current
       const now = Date.now()
       const dnc = new Set(s.clients.filter(c => c.doNotContact).map(c => c.id))
-      const due = s.tasks.filter(t => t.status === 'open' && t.slaMinutes && !dnc.has(t.clientId) && ((t.escalationLevel === 0 && now > ms(t.dueAt)) || (t.escalationLevel === 1 && now > ms(t.createdAt) + 60 * MIN)))
+      const second = leadRule(s).second
+      const due = s.tasks.filter(t => t.status === 'open' && t.slaMinutes && !dnc.has(t.clientId) && ((t.escalationLevel === 0 && now > ms(t.dueAt)) || (t.escalationLevel === 1 && now > ms(t.dueAt) - t.slaMinutes * MIN + second * MIN)))
       if (!due.length) return
       update(d => {
         for (const x of due) {

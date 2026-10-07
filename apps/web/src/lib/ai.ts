@@ -8,6 +8,7 @@ const ASKED_NUMBER_RE = /\b(your (phone|number|contact)|contact number|can i cal
 const PRICE_RE = /\b(price|cost|how much|fees?|rate|charges?|expensive|cheap|deposit)\b/i
 const CLINICAL_RE = /\b(pregnan\w*|side effects?|allerg\w*|medication|medicine|infection|diabetes|blood thinners?|safe for me|scar\w*|pain(ful)?|eczema|keloid|breastfeeding)\b/i
 const MINOR_RE = /\b(i'?m|i am|im)\s*(1[0-7])\b|\b(1[0-7])\s*(yo|years? old)\b|\bin (year|grade) \d+\b|\bmy (mum|mom|parents?) (says|said|will)\b/i
+const PERSON_RE = /^\s*(person|human|agent|real person)\s*[.!]?\s*$|\b(speak|talk|chat) (to|with) (a |someone|a real|an? )?(person|human|someone|agent|staff)\b/i
 const COMPLAINT_RE = /\b(complain\w*|refund|terrible|awful|scam|worst|angry|disappointed|rude)\b/i
 const OPTOUT_RE = /\b(stop messaging|unsubscribe|don'?t (message|contact) me|leave me alone|stop)\b/i
 const BOOK_RE = /\b(book|appointment|slot|available|availability|when can|consultation|visit)\b/i
@@ -22,6 +23,7 @@ export function detectFlags(text: string): Flag[] {
   if (PRICE_RE.test(text)) f.push('price')
   if (CLINICAL_RE.test(text)) f.push('clinical')
   if (MINOR_RE.test(text)) f.push('minor')
+  if (PERSON_RE.test(text)) f.push('asked_person')
   if (COMPLAINT_RE.test(text)) f.push('complaint')
   if (OPTOUT_RE.test(text) && text.trim().split(/\s+/).length <= 6) f.push('opt_out')
   return f
@@ -69,8 +71,11 @@ export function ruleDraft(state: DemoState, c: Conversation): AiDraft {
   if (flags.includes('clinical')) {
     return { text: `${intro}That's an important question, ${first}, and it needs one of our clinicians to answer it properly. Could you share the best number to reach you? A clinician can call you, usually the same day.`, confidence: 0.55, intent: 'clinical', reasons: [...reasons, 'Clinical question: the AI does not give medical advice and routes this to a clinician.', 'Confidence is below the handoff threshold, so a person reviews this chat.'], createdAt: new Date().toISOString() }
   }
+  if (flags.includes('asked_person')) {
+    return { text: `${intro}Of course, ${first}. I've let our team know and a member of staff will reply here shortly.`, confidence: 0.95, intent: 'asked_person', reasons: [...reasons, 'They asked for a person: the chat is flagged for staff and the on-shift coordinator is alerted.'], createdAt: new Date().toISOString() }
+  }
   if (flags.includes('complaint')) {
-    return { text: `${intro}I'm sorry to hear that, ${first}. I've passed this to our team lead, who will contact you personally today.`, confidence: 0.5, intent: 'complaint', reasons: [...reasons, 'Complaint: escalated to a manager; the AI stops replying in this chat.'], createdAt: new Date().toISOString() }
+    return { text: `${intro}I'm sorry to hear that, ${first}. I've passed this to our team lead, who will contact you personally today. ${state.ai.escalationText}`, confidence: 0.5, intent: 'complaint', reasons: [...reasons, 'Complaint: escalated to a manager; the AI stops replying in this chat.'], createdAt: new Date().toISOString() }
   }
   if (flags.includes('phone_detected')) {
     return { text: `Thank you, ${first}! I've passed your number to our coordinator, who will call you shortly to find a time that suits you and talk you through the next steps.`, confidence: 0.96, intent: 'contact_shared', reasons: ['Phone number detected: lead created and assigned with a 15-minute call deadline.'], createdAt: new Date().toISOString() }
@@ -121,6 +126,7 @@ HARD RULES:
 - Never promise results. Never name prescription-only medicines. Never book anyone under 18.
 - Never pretend to be a named staff member. Never ask for card details.
 - Goal: answer briefly and warmly, then ask for their phone number so a coordinator can call.
+- If they ask for a person, are upset, or you are unsure, say a member of staff will reply and include: "${state.ai.escalationText}"
 - Banned phrases: ${state.ai.bannedPhrases.join(', ')}
 - Reply in the client's language (${client?.language ?? 'en'}). Keep it under 60 words. Plain text, no markdown.
 

@@ -7,6 +7,7 @@ import type { AuditEntry } from '../../lib/types'
 import { DAY, ago, dateTime, iso, ms, startOfDay, uid } from '../../lib/time'
 import { localDay } from '../settings/ext'
 import { AUDIT_KINDS, actionLabel, actorName, auditCsv, kindsOf, targetLink, type AuditKind } from './audit'
+import { saveFile } from '../../lib/download'
 
 type Range = 'any' | 'today' | 'yesterday' | '7d' | '30d' | 'day'
 const PAGE = 40
@@ -55,24 +56,14 @@ export function ActivityLog() {
 
   const exportCsv = () => {
     const csv = auditCsv(state, rows)
-    let downloaded = false
-    try {
-      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${state.settings.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'clinic'}-audit-${localDay()}.csv`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 2000)
-      downloaded = true
-    } catch {
-      /* downloads can be blocked inside previews; the CSV is still prepared */
-    }
+    const file = `${state.settings.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'clinic'}-audit-${localDay()}.csv`
+    void saveFile(file, csv, 'text/csv').then(out => {
+      if (out === 'unavailable') actions.toast('Saving files is not available in this view.', 'warn')
+    })
     actions.update(d => {
       d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'audit.exported', target: { type: 'settings', id: 'audit', label: 'Audit log' }, detail: `Exported ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'} as CSV${filtered ? ' (filtered)' : ''}` })
     })
-    actions.toast(`Export prepared: ${rows.length} row${rows.length === 1 ? '' : 's'}, ${Math.max(1, Math.round(csv.length / 1024))} KB${downloaded ? '' : '. Downloads are blocked here.'}`, 'success')
+    actions.toast(`Export prepared: ${rows.length} row${rows.length === 1 ? '' : 's'}, ${Math.max(1, Math.round(csv.length / 1024))} KB`, 'success')
   }
 
   const overrides = state.audit.filter(e => kindsOf(e).includes('override') && ms(e.at) > Date.now() - 7 * DAY).length

@@ -199,7 +199,7 @@ export function DailyBrief() {
   const { state, me, can } = useStore()
   const now = useNow(60_000)
   const text = dailyBrief(state, me, now, p => can(p))
-  const ask = () => window.dispatchEvent(new CustomEvent('lm:open-claude', { detail: { prompt: claudePrompt(me) } }))
+  const ask = () => window.dispatchEvent(new CustomEvent('lm:open-claude', { detail: { prompt: claudePrompt(me, state.settings.orgName) } }))
   return (
     <section className="card card-padded td-brief" aria-labelledby="td-brief-title">
       <div className="td-brief-head">

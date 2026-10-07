@@ -88,6 +88,7 @@ export type Flag = NonNullable<Message['flags']>[number]
 export const FLAG_META: Record<Flag, { label: string; tone: Tone; icon: IconName }> = {
   phone_detected: { label: 'Phone shared', tone: 'warn', icon: 'phone' },
   asked_number: { label: 'Asked for our number', tone: 'info', icon: 'phone' },
+  asked_person: { label: 'Asked for a person', tone: 'warn', icon: 'hand' },
   clinical: { label: 'Clinical', tone: 'team', icon: 'shield' },
   minor: { label: 'Possible minor', tone: 'danger', icon: 'alert' },
   complaint: { label: 'Complaint', tone: 'danger', icon: 'flag' },
@@ -130,7 +131,7 @@ export const SAVED_REPLIES: SavedReply[] = [
   { id: 'consult', title: 'Offer a free consultation', text: 'Hi {first}, our consultations are free and take about 30 minutes. What\'s the best number for our coordinator to call you on to find a time that suits you?' },
   { id: 'price', title: 'Price is confirmed at consultation', text: 'Prices depend on the areas and the number of sessions, so your clinician confirms the exact figure at your free consultation. We also offer interest-free instalments.' },
   { id: 'clinical', title: 'A clinician will call you', text: 'That\'s a really good question for one of our clinicians, {first}. Could you share the best number to reach you? They usually call back the same day.' },
-  { id: 'location', title: 'Address and parking', text: 'We\'re at Northlight Clinic in Marylebone, London, a short walk from Baker Street, with free parking for clients. Opening hours are Monday to Saturday, 9am to 7pm.' },
+  { id: 'location', title: 'Address and parking', text: 'We\'re at our Marylebone clinic in London, a short walk from Baker Street, with free parking for clients. Opening hours are Monday to Saturday, 9am to 7pm.' },
   { id: 'deposit', title: 'Deposit to hold the slot', text: 'To hold your appointment we take a 20% deposit, fully refundable up to 48 hours before. I\'ll send you a secure payment link by WhatsApp now. Thanks, {me}' },
 ]
 

@@ -201,6 +201,13 @@ export function Toggle({ checked, onChange, label, disabled, hideLabel }: { chec
 
 // ---- overlays ----------------------------------------------------------------------------------
 
+/** Time the overlay opened, so the second click of a double click that opened it does not close it again. */
+function useOpenedAt(open: boolean) {
+  const at = useRef(0)
+  useEffect(() => { if (open) at.current = Date.now() }, [open])
+  return () => Date.now() - at.current > 300
+}
+
 function useEscape(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) return
@@ -212,13 +219,14 @@ function useEscape(open: boolean, onClose: () => void) {
 
 export function Modal({ open, title, onClose, children, footer, width = 520, description }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; width?: number; description?: ReactNode }) {
   useEscape(open, onClose)
+  const settled = useOpenedAt(open)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (open) ref.current?.querySelector<HTMLElement>('input, textarea, select, button.btn-primary')?.focus()
   }, [open])
   if (!open) return null
   return (
-    <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+    <div className="overlay" onMouseDown={e => e.target === e.currentTarget && settled() && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} style={{ maxWidth: width }} ref={ref}>
         <div className="modal-head">
           <div className="stack" style={{ gap: 2 }}>
@@ -236,9 +244,10 @@ export function Modal({ open, title, onClose, children, footer, width = 520, des
 
 export function Drawer({ open, title, onClose, children, footer, width = 440, side = 'right' }: { open: boolean; title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; width?: number; side?: 'right' | 'left' }) {
   useEscape(open, onClose)
+  const settled = useOpenedAt(open)
   if (!open) return null
   return (
-    <div className="overlay overlay-drawer" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+    <div className="overlay overlay-drawer" onMouseDown={e => e.target === e.currentTarget && settled() && onClose()}>
       <aside className={`drawer drawer-${side}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} style={{ width }}>
         <div className="drawer-head">
           <h2>{title}</h2>
