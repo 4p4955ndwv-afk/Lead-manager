@@ -1,6 +1,6 @@
 # Deploys the Lead Manager web app to Cloudflare Workers (free plan, *.workers.dev) on every push.
-# Needs two repository secrets: CLOUDFLARE_API_TOKEN (template "Edit Cloudflare Workers") and CLOUDFLARE_ACCOUNT_ID.
-# Without them the job builds the app and skips the deploy with a notice.
+# Needs the repository secret CLOUDFLARE_API_TOKEN (template "Edit Cloudflare Workers"). The token is tied to one
+# account, so wrangler finds the account itself. Without the secret the job builds the app and skips the deploy.
 name: Deploy web app
 
 on:
@@ -21,7 +21,6 @@ jobs:
         working-directory: apps/web
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,10 +31,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Skip deploy when Cloudflare secrets are missing
-        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
-        run: echo "::notice::Built OK. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to deploy."
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "::notice::Built OK. Add the CLOUDFLARE_API_TOKEN repository secret to deploy."
       - name: Deploy to Cloudflare Workers
-        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           set -o pipefail
           npx wrangler deploy 2>&1 | tee deploy.log
