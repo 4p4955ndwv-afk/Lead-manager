@@ -1,6 +1,6 @@
 // Selectors for the Today page. Everything is derived from the store state at render time.
 import type { AiMode, Appointment, Conversation, DemoState, PageId, Payment, Role, Task, User } from '../../lib/types'
-import { DAY, HOUR, MIN, money, ms, sameDay, timeOf } from '../../lib/time'
+import { DAY, HOUR, MIN, money, ms, sameDay, startOfDay, timeOf } from '../../lib/time'
 import { fmtDuration, fmtInt, median, plural } from '../analytics/format'
 
 export const seesAll = (role: Role) => role === 'owner' || role === 'manager'
@@ -94,6 +94,12 @@ export function todaysAppointments(s: DemoState, now: number, practitionerId?: s
     .sort((a, b) => ms(a.start) - ms(b.start))
 }
 
+/** Unconfirmed appointments from an hour ago to the end of tomorrow (what the front desk chases). */
+export function unconfirmedSoon(s: DemoState, now: number): Appointment[] {
+  const end = startOfDay(now) + 2 * DAY
+  return s.appointments.filter(a => a.status === 'unconfirmed' && ms(a.start) > now - HOUR && ms(a.start) < end).sort((a, b) => ms(a.start) - ms(b.start))
+}
+
 export const APPT_TYPE: Record<Appointment['type'], string> = { consultation: 'Consultation', session: 'Session', follow_up: 'Follow-up' }
 
 export const STATUS_LABEL: Record<Appointment['status'], string> = {
@@ -172,8 +178,8 @@ export function headline(s: DemoState, me: User, now: number, can: (p: 'chats.vi
     const today = todaysAppointments(s, now)
     const arrived = today.filter(a => a.status === 'arrived')
     if (arrived.length) return { tone: 'info', text: `${clientName(s, arrived[0].clientId)} is in reception for ${timeOf(arrived[0].start)}. Let ${s.users.find(u => u.id === arrived[0].practitionerId)?.name ?? 'the clinician'} know.` }
-    const unconf = s.appointments.filter(a => a.status === 'unconfirmed' && ms(a.start) > now && ms(a.start) < now + 2 * DAY)
-    if (unconf.length) return { tone: 'warn', text: `${plural(unconf.length, 'appointment')} in the next two days ${unconf.length === 1 ? 'is' : 'are'} still unconfirmed.` }
+    const unconf = unconfirmedSoon(s, now)
+    if (unconf.length) return { tone: 'warn', text: `${plural(unconf.length, 'appointment')} today and tomorrow ${unconf.length === 1 ? 'is' : 'are'} still unconfirmed.` }
     return { tone: 'ok', text: 'Everyone due in today is confirmed.' }
   }
   if (role === 'marketing') {
@@ -215,7 +221,7 @@ export function dailyBrief(s: DemoState, me: User, now: number, can: (p: 'paymen
   } else {
     parts.push(`Every lead call in the last 24 hours was made within 15 minutes${y ? ` (${y.callSlaMetPct}% met yesterday)` : ''}.`)
   }
-  parts.push(`${modeSentence(s)}${y && !s.ai.killSwitch ? ` First replies took ${fmtDuration(y.medianFirstReplySec)} (median).` : ''}`)
+  parts.push(`${modeSentence(s)}${y && !s.ai.killSwitch ? ` Yesterday's median first reply was ${fmtDuration(y.medianFirstReplySec)}.` : ''}`)
   const risky = s.conversations.filter(c => c.needsHuman && /minor|complaint|clinical/i.test(c.needsHumanReason ?? ''))
   if (risky.length) parts.push(`Waiting for a person: ${risky.map(c => `${clientName(s, c.clientId)} (${(c.needsHumanReason ?? '').toLowerCase()})`).join(', ')}.`)
   const appts = todaysAppointments(s, now)

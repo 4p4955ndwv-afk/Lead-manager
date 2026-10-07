@@ -2,7 +2,13 @@
 
 .st-page { max-width: 1320px; grid-template-columns: minmax(0, 1fr); }
 .st-page > [role='tabpanel'] { min-width: 0; }
+/* keep the hidden switch input inside its label, so it scrolls with drawers and tables and keyboard focus scrolls to it */
+.st-page .toggle { position: relative; }
+/* disabled icon buttons (a treatment that is in use can't be removed) must not look clickable */
+.st-page .icon-btn:disabled { opacity: .4; cursor: not-allowed; background: transparent; }
 .st-page .tabs .tab, .st-page .tabs .tab svg, .st-page .btn svg, .st-page .chip, .st-page .chip svg { flex: none; }
+/* seven tabs don't fit beside the sidebar on a laptop: drop the decorative icons rather than clip the last tab */
+@media (min-width: 861px) and (max-width: 1400px) { .st-page .tabs .tab > svg { display: none; } }
 .st-link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: var(--accent-line); text-underline-offset: 3px; }
 .st-link:hover { text-decoration-color: currentColor; }
 .st-ok { color: var(--ok); }

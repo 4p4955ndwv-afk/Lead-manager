@@ -217,20 +217,22 @@ export function ageInYears(dob: string, at = Date.now()): number | null {
 export interface AgeCheck { blocked: boolean; title: string; detail: string; unverified: boolean; scope?: 'client' | 'procedure' }
 
 /**
- * Under-18s can never be booked. A client who is not age-verified and either has an under-18 exit on any
- * episode or a date of birth under 18 is blocked. A known date of birth below a procedure's minimum age
+ * Under-18s can never be booked. A date of birth under 18 always blocks; an under-18 exit on any episode blocks
+ * until photo ID is checked and recorded (ageVerified). A known date of birth below a procedure's minimum age
  * (e.g. 21 for FUE) is also blocked. Neither can be overridden from the calendar.
  */
 export function ageCheck(s: DemoState, client: Client, procedureId?: string): AgeCheck {
   const age = client.dateOfBirth ? ageInYears(client.dateOfBirth) : null
   const under18Exit = s.episodes.find(e => e.clientId === client.id && e.exit === 'under18')
-  if (!client.ageVerified && (under18Exit || (age != null && age < 18))) {
+  // A recorded date of birth under 18 always blocks, even when the age-check box is ticked: the two contradict.
+  const dobUnder18 = age != null && age < 18
+  if (dobUnder18 || (!client.ageVerified && under18Exit)) {
     return {
       blocked: true,
-      unverified: true,
+      unverified: !client.ageVerified,
       scope: 'client',
       title: 'Booking blocked: client may be under 18',
-      detail: under18Exit
+      detail: under18Exit && !dobUnder18
         ? `${client.name} was marked under 18${under18Exit.exitReason ? ` (“${under18Exit.exitReason}”)` : ''}. Northlight only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`
         : `${client.name}'s date of birth makes them ${age}. Northlight only treats clients aged 18 and over, so no appointment can be booked, and this cannot be overridden.`,
     }

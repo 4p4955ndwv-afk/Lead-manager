@@ -5,7 +5,7 @@ import type { DemoState, Role, User } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
 import { ROLE_TEMPLATES } from '../../lib/permissions'
 import { iso, ms, uid } from '../../lib/time'
-import { AVATAR_COLOURS, ROLES, ROLE_INFO, realOverrides } from './roles'
+import { AVATAR_COLOURS, ROLES, ROLE_INFO, firstName, realOverrides } from './roles'
 import { editExt, getExt } from '../settings/ext'
 
 // ---- guards -------------------------------------------------------------------------------------
@@ -159,7 +159,7 @@ export function RoleModal({ user, onClose }: { user: User | null; onClose: () =>
       description="A role is a starting set of permissions. You can still adjust single permissions for this person afterwards."
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" disabled={!ok} onClick={save}>{changed ? `Make ${user.name.split(' ')[0]} ${ROLE_LABEL[role]}` : 'Pick a new role'}</Button>
+        <Button variant="primary" disabled={!ok} onClick={save}>{changed ? `Make ${firstName(user.name)} ${ROLE_LABEL[role]}` : 'Pick a new role'}</Button>
       </>}>
       <div className="stack lg">
         <div className="tm-roles-pick" role="radiogroup" aria-label="Role">
@@ -185,7 +185,7 @@ export function RoleModal({ user, onClose }: { user: User | null; onClose: () =>
         {overrides.length > 0 && (
           <label className="checkbox">
             <input type="checkbox" checked={keep} onChange={e => setKeep(e.target.checked)} />
-            Keep {user.name.split(' ')[0]}’s {overrides.length} personal override{overrides.length > 1 ? 's' : ''} on top of the new role
+            Keep {firstName(user.name)}’s {overrides.length} personal override{overrides.length > 1 ? 's' : ''} on top of the new role
           </label>
         )}
         <Field label="Reason (saved in the audit log)" hint="Required. Everyone with audit access can see it.">
@@ -229,7 +229,7 @@ export function StatusDialog({ user, mode, onClose }: { user: User | null; mode:
   useEffect(() => { setTo(suggested?.id ?? '') }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user) return null
-  const first = user.name.split(' ')[0]
+  const first = firstName(user.name)
   const invited = user.status === 'invited'
   const toUser = state.users.find(u => u.id === to)
   const apptNote = work.appts > 0 && toUser && toUser.role !== 'clinician' ? ` Their ${work.appts} upcoming appointment${work.appts > 1 ? 's stay' : ' stays'} with them; move ${work.appts > 1 ? 'them' : 'it'} in Calendar.` : ''

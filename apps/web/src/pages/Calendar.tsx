@@ -50,6 +50,19 @@ export default function Calendar() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [flashId, setFlashId] = useState<string | null>(null)
   const [booking, setBooking] = useState<BookingPreset | null>(null)
+  // When the booking modal closes (e.g. a double click on "Book appointment"), the next click can land on the
+  // grid underneath and open another booking or a drawer. Ignore grid clicks for a moment after it closes.
+  const bookingClosedAt = useRef(0)
+  // Likewise the second click of a double click on "Rebook" lands on the new modal's backdrop: do not let it close at once.
+  const bookingOpenedAt = useRef(0)
+  const closeBooking = () => {
+    if (Date.now() - bookingOpenedAt.current < 300) return
+    bookingClosedAt.current = Date.now()
+    setBooking(null)
+  }
+  const justClosed = () => Date.now() - bookingClosedAt.current < 600
+  // A double click on an appointment opens the drawer, then its second click lands on the backdrop: ignore that close.
+  const drawerOpenedAt = useRef(0)
 
   const setView = (v: CalView) => {
     setViewState(v)
@@ -81,6 +94,7 @@ export default function Calendar() {
     setBranch(b => (b !== 'all' && b !== a.branchId ? 'all' : b))
     setMine(m => (m && a.practitionerId !== me.id ? false : m))
     if (a.status === 'cancelled') setShowCancelled(true)
+    drawerOpenedAt.current = Date.now()
     setOpenId(a.id)
     // only when the route changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,8 +162,13 @@ export default function Calendar() {
   }, [view, state.users, state.rooms, state.branches, branch, mine, me, visible])
 
   // ---- handlers ----------------------------------------------------------------------------------
-  const openAppt = (a: Appointment) => setOpenId(a.id)
+  const openAppt = (a: Appointment) => {
+    if (justClosed()) return
+    drawerOpenedAt.current = Date.now()
+    setOpenId(a.id)
+  }
   const closeDrawer = () => {
+    if (Date.now() - drawerOpenedAt.current < 300) return
     setOpenId(null)
     if (route.id) {
       try {
@@ -165,6 +184,7 @@ export default function Calendar() {
   }
   const startBooking = (preset: BookingPreset) => {
     setOpenId(null)
+    bookingOpenedAt.current = Date.now()
     setBooking(preset)
   }
   const askClaude = () => {
@@ -244,7 +264,7 @@ export default function Calendar() {
         {nextUp && (() => {
           const c = clientOf(state, nextUp)
           return (
-            <button type="button" className="ca-sum ca-sum-next" onClick={() => setOpenId(nextUp.id)}>
+            <button type="button" className="ca-sum ca-sum-next" onClick={() => openAppt(nextUp)}>
               <span className="ca-sum-label">Next up</span>
               <span className="ca-sum-value ca-sum-text truncate">{hm(nextUp.start)} · {c?.name ?? 'Client'}</span>
               <span className="ca-sum-hint truncate">{state.users.find(u => u.id === nextUp.practitionerId)?.name ?? ''}</span>
@@ -293,7 +313,7 @@ export default function Calendar() {
         columns.length ? (
           <DayGrid state={state} day={day} mode={view === 'room' ? 'room' : 'practitioner'} columns={columns} appts={visible} selectedId={selectedId} symbol={symbol}
             onOpen={openAppt}
-            onSlot={canManage ? (startMin, colId) => startBooking({
+            onSlot={canManage ? (startMin, colId) => !justClosed() && startBooking({
               start: combine(day, `${String(Math.floor(startMin / 60)).padStart(2, '0')}:${String(startMin % 60).padStart(2, '0')}`),
               practitionerId: view === 'practitioner' ? colId : undefined,
               roomId: view === 'room' ? colId : undefined,
@@ -321,7 +341,7 @@ export default function Calendar() {
 
       <ApptDrawer appointmentId={openId} onClose={closeDrawer} onBook={startBooking} />
       {booking && (
-        <BookingModal open preset={booking} onClose={() => setBooking(null)}
+        <BookingModal open preset={booking} onClose={closeBooking}
           onBooked={(id, start, where) => {
             setDay(startOfLocalDay(start))
             if (branch !== 'all' && branch !== where.branchId) setBranch('all')

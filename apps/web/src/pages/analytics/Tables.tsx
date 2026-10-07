@@ -40,7 +40,7 @@ export function SourcesTable({ range, channel, now }: { range: number; channel: 
                       <Progress value={r.contactRate * 100} label={`Contact rate ${fmtPct(r.contactRate)}`} />
                     </div>
                   </td>
-                  <td className="an-r num">{fmtInt(r.booked)} <span className="faint tiny">({fmtPct(r.bookRate)})</span></td>
+                  <td className="an-r num">{fmtInt(r.booked)} <span className="muted tiny">({fmtPct(r.bookRate)})</span></td>
                   <td className="an-r num">{fmtInt(r.treatments)}</td>
                 </tr>
               ))}

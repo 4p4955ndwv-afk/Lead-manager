@@ -4,7 +4,7 @@ import { Icon } from '../../components/icons'
 import { useStore, userName } from '../../lib/store'
 import type { DemoState } from '../../lib/types'
 import { DAY, ago, iso, ms, shortDate, until, uid } from '../../lib/time'
-import { editExt, getExt, type DataRequest, type SettingsExt } from './ext'
+import { editExt, getExt, localDay, type DataRequest, type SettingsExt } from './ext'
 
 const RETENTION: Array<{ key: 'chats' | 'clinical' | 'exports'; label: string; hint: string; min: number; max: number }> = [
   { key: 'chats', label: 'Chats with people who never booked', hint: 'DMs, AI drafts and call notes are deleted after this. Clients keep their chats while they have an open plan.', min: 3, max: 120 },
@@ -232,10 +232,10 @@ function AddRequestModal({ open, onClose }: { open: boolean; onClose: () => void
   const [other, setOther] = useState('')
   const [kind, setKind] = useState<'export' | 'erase'>('export')
   const [via, setVia] = useState('Instagram DM')
-  const [received, setReceived] = useState(() => new Date().toISOString().slice(0, 10))
+  const [received, setReceived] = useState(() => localDay())
   const [note, setNote] = useState('')
   useEffect(() => {
-    if (open) { setClientId(''); setOther(''); setKind('export'); setVia('Instagram DM'); setReceived(new Date().toISOString().slice(0, 10)); setNote('') }
+    if (open) { setClientId(''); setOther(''); setKind('export'); setVia('Instagram DM'); setReceived(localDay()); setNote('') }
   }, [open])
   const clients = state.clients.filter(c => c.name !== 'Erased client').sort((a, b) => a.name.localeCompare(b.name))
   const person = clientId === '__other' ? other.trim() : clients.find(c => c.id === clientId)?.name ?? ''
@@ -288,7 +288,7 @@ function AddRequestModal({ open, onClose }: { open: boolean; onClose: () => void
             )}
           </Field>
           <Field label="Received on">
-            {id => <input id={id} className="input" type="date" value={received} max={new Date().toISOString().slice(0, 10)} onChange={e => setReceived(e.target.value)} />}
+            {id => <input id={id} className="input" type="date" value={received} max={localDay()} onChange={e => setReceived(e.target.value)} />}
           </Field>
         </div>
         <Field label="Note (optional)">

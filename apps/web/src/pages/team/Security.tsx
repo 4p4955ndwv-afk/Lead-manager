@@ -27,6 +27,8 @@ export function Security() {
   const passkey = live.filter(u => u.twoFactor === 'passkey').length
   const totp = live.filter(u => u.twoFactor === 'totp').length
   const none = live.filter(u => u.twoFactor === 'none')
+  // people who are signed in somewhere: invited people have no session yet and suspended people are already out
+  const others = state.users.filter(u => u.status === 'active' && u.id !== me.id)
 
   const setPolicy = (on: boolean, reason?: string) => {
     actions.update(d => {
@@ -50,15 +52,24 @@ export function Security() {
   const doSignOutAll = (reason: string) => {
     actions.update(d => {
       editExt(d, e => { e.security.lastSignOutAllAt = iso(Date.now()) })
-      d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'security.sign_out_all', target: { type: 'settings', id: 'security', label: 'All devices' }, detail: `Signed out ${live.length - 1} other people on every device`, reason })
+      d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'security.sign_out_all', target: { type: 'settings', id: 'security', label: 'All devices' }, detail: `Signed out ${others.length} other ${others.length === 1 ? 'person' : 'people'} on every device`, reason })
     })
-    actions.notify({ userIds: live.filter(u => u.id !== me.id).map(u => u.id) }, { kind: 'system', title: 'You were signed out on all devices', body: `${me.name}: ${reason}. Sign in again with your passkey or 2FA app.`, link: { page: 'today' } })
+    actions.notify({ userIds: others.map(u => u.id) }, { kind: 'system', title: 'You were signed out on all devices', body: `${me.name}: ${reason}. Sign in again with your passkey or 2FA app.`, link: { page: 'today' } })
     actions.toast('Everyone else has been signed out on every device. They sign in again with their passkey or 2FA app.', 'success')
   }
 
   const remind = (id: string) => {
     const u = state.users.find(x => x.id === id)
     if (!u) return
+    if (u.status === 'invited') {
+      // they can't sign in yet, so a 2FA reminder would never reach them: send the invite again instead
+      actions.update(d => {
+        editExt(d, e => { e.invites[u.id] = iso(Date.now()) })
+        d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'user.invite_resent', target: { type: 'user', id: u.id, label: u.name }, detail: `Invite re-sent to ${u.email}` })
+      })
+      actions.toast(`New invite sent to ${u.email}. They set up a passkey or 2FA app when they accept.`, 'success')
+      return
+    }
     actions.notify({ userIds: [u.id] }, { kind: 'system', title: 'Please add a passkey or 2FA app', body: 'It takes a minute: open your profile, choose Sign-in security and follow the steps.', link: { page: 'today' } })
     actions.audit({ action: 'user.2fa_reminder', target: { type: 'user', id: u.id, label: u.name }, detail: `Reminder sent to ${u.email}` })
     actions.toast(`Reminder sent to ${u.name}`, 'success')
@@ -123,7 +134,7 @@ export function Security() {
                   <span className="small muted truncate">{ROLE_LABEL[u.role]} · {u.status === 'invited' ? 'Has not accepted the invite yet' : `Last active ${ago(u.lastActiveAt)}`}</span>
                 </div>
                 {u.status === 'invited' ? <Chip tone="info">Sets up on accept</Chip> : <Chip tone="warn">Password only</Chip>}
-                <Button size="sm" variant="secondary" icon="bell" disabled={!canManage} onClick={() => remind(u.id)}>Send reminder</Button>
+                <Button size="sm" variant="secondary" icon={u.status === 'invited' ? 'mail' : 'bell'} disabled={!canManage} onClick={() => remind(u.id)}>{u.status === 'invited' ? 'Resend invite' : 'Send reminder'}</Button>
               </li>
             ))}
           </ul>
@@ -135,7 +146,7 @@ export function Security() {
         placeholder="e.g. Temporary while the new reception tablet is set up"
         onConfirm={r => setPolicy(false, r)} onClose={() => setConfirmOff(false)} />
       <ReasonDialog open={signOutAll} title="Sign everyone out on every device?" tone="danger" confirmLabel="Sign everyone out"
-        body={`${live.length - 1} people will need to sign in again. Anyone mid-call keeps the call, but loses unsaved notes.`}
+        body={`${others.length} ${others.length === 1 ? 'person' : 'people'} will need to sign in again. Anyone mid-call keeps the call, but loses unsaved notes.`}
         placeholder="e.g. Reception phone lost on Saturday"
         onConfirm={doSignOutAll} onClose={() => setSignOutAll(false)} />
     </div>

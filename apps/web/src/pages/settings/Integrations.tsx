@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Card, Chip, EmptyState, Field, Modal, ReasonDialog, Toggle, UserAvatar } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { useStore, userName } from '../../lib/store'
@@ -6,6 +6,15 @@ import { DAY, ago, iso, ms, shortDate, until, uid } from '../../lib/time'
 import { TOKEN_SCOPES, WEBHOOK_EVENTS, copyText, editExt, getExt, randomChars, type WebhookEvent } from './ext'
 
 export const MCP_URL = 'https://mcp.northlight.example/mcp'
+
+/**
+ * A show-once secret replaces the create form, so the second click of a double-click lands on its "done" button or,
+ * as the dialog shrinks, on the backdrop, and the secret is gone before anyone sees it. Closing is ignored for a moment.
+ */
+function useSettledClick(ms = 700) {
+  const at = useRef(0)
+  return { shown: () => { at.current = Date.now() }, guard: (fn: () => void) => () => { if (Date.now() - at.current >= ms) fn() } }
+}
 
 function CopyField({ value, label }: { value: string; label: string }) {
   const { actions } = useStore()
@@ -189,6 +198,7 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose: () => voi
   const [scopes, setScopes] = useState<string[]>(['read:leads'])
   const [days, setDays] = useState(90)
   const [created, setCreated] = useState<string | null>(null)
+  const settled = useSettledClick()
   useEffect(() => { if (open) { setName(''); setScopes(['read:leads']); setDays(90); setCreated(null) } }, [open])
   const ok = name.trim().length >= 3 && scopes.length > 0
 
@@ -202,13 +212,14 @@ function CreateTokenModal({ open, onClose }: { open: boolean; onClose: () => voi
       })
       d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'api.token_created', target: { type: 'settings', id, label: name.trim() }, detail: `Scopes ${scopes.join(', ')} · expires in ${days} days` })
     })
+    settled.shown()
     setCreated(secret)
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={created ? 'Copy your new token' : 'Create an API token'} width={560}
+    <Modal open={open} onClose={created ? settled.guard(onClose) : onClose} title={created ? 'Copy your new token' : 'Create an API token'} width={560}
       description={created ? 'This is the only time the full token is shown. Store it in your password manager or the other system’s settings.' : 'Give it the least access it needs. You can revoke it at any time.'}
-      footer={created ? <Button variant="primary" onClick={onClose}>I’ve stored it safely</Button> : <>
+      footer={created ? <Button variant="primary" onClick={settled.guard(onClose)}>I’ve stored it safely</Button> : <>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant="primary" icon="key" disabled={!ok} onClick={create}>Create token</Button>
       </>}>
@@ -252,6 +263,7 @@ function AddWebhookModal({ open, onClose }: { open: boolean; onClose: () => void
   const [events, setEvents] = useState<WebhookEvent[]>(['lead.created'])
   const [tried, setTried] = useState(false)
   const [secret, setSecret] = useState<string | null>(null)
+  const settled = useSettledClick()
   useEffect(() => { if (open) { setUrl(''); setEvents(['lead.created']); setTried(false); setSecret(null) } }, [open])
   let urlError: string | undefined
   try {
@@ -271,14 +283,15 @@ function AddWebhookModal({ open, onClose }: { open: boolean; onClose: () => void
       editExt(d, e => { e.webhooks.push({ id, url: url.trim(), events, secretLast4: s.slice(-4), enabled: true, createdAt: iso(Date.now()), createdBy: d.currentUserId }) })
       d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'webhook.added', target: { type: 'settings', id, label: 'Webhook' }, detail: `${url.trim()} · ${events.join(', ')}` })
     })
+    settled.shown()
     setSecret(s)
     actions.toast('Webhook added. Send a test to check it receives events.', 'success')
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={secret ? 'Copy the signing secret' : 'Add a webhook'} width={560}
+    <Modal open={open} onClose={secret ? settled.guard(onClose) : onClose} title={secret ? 'Copy the signing secret' : 'Add a webhook'} width={560}
       description={secret ? 'Use it to check that events really come from Lead Manager (HMAC-SHA256 in the Lead-Signature header). It is shown once.' : 'We send a POST with a JSON body for each event you pick.'}
-      footer={secret ? <Button variant="primary" onClick={onClose}>Done</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" onClick={add}>Add webhook</Button></>}>
+      footer={secret ? <Button variant="primary" onClick={settled.guard(onClose)}>Done</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" onClick={add}>Add webhook</Button></>}>
       {secret ? <CopyField value={secret} label="Signing secret" /> : (
         <div className="stack lg">
           <Field label="Endpoint URL" error={tried ? urlError : undefined}>

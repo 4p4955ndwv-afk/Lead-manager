@@ -89,6 +89,15 @@ export default function ClaudePanel({ open, onClose, initialPrompt }: { open: bo
 
   useEffect(() => { if (open) endRef.current?.scrollIntoView({ block: 'end' }) }, [turns, open])
 
+  // each person has their own login: answers written with one person's access (unmasked numbers, revenue) must not
+  // stay on screen, or go to live Claude as history, after the demo switches to someone else
+  useEffect(() => {
+    abortRef.current?.abort()
+    if (demoTimer.current) { window.clearTimeout(demoTimer.current.id); demoTimer.current = null }
+    setTurns([])
+    setInput('')
+  }, [me.id])
+
   const stop = () => {
     abortRef.current?.abort()
     if (demoTimer.current) {

@@ -2,20 +2,22 @@ import { useMemo, useState } from 'react'
 import { Button, Chip, EmptyState, Field, UserAvatar } from '../../components/ui'
 import { Icon } from '../../components/icons'
 import { useStore } from '../../lib/store'
+import { canOpen } from '../../lib/permissions'
 import type { AuditEntry } from '../../lib/types'
 import { DAY, ago, dateTime, iso, ms, startOfDay, uid } from '../../lib/time'
+import { localDay } from '../settings/ext'
 import { AUDIT_KINDS, actionLabel, actorName, auditCsv, kindsOf, targetLink, type AuditKind } from './audit'
 
 type Range = 'any' | 'today' | 'yesterday' | '7d' | '30d' | 'day'
 const PAGE = 40
 
 export function ActivityLog() {
-  const { state, actions } = useStore()
+  const { state, me, actions } = useStore()
   const [q, setQ] = useState('')
   const [actor, setActor] = useState('all')
   const [kind, setKind] = useState<AuditKind>('all')
   const [range, setRange] = useState<Range>('any')
-  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10))
+  const [day, setDay] = useState(() => localDay())
   const [limit, setLimit] = useState(PAGE)
 
   const actors = useMemo(() => {
@@ -58,7 +60,7 @@ export function ActivityLog() {
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
       const a = document.createElement('a')
       a.href = url
-      a.download = `northlight-audit-${new Date().toISOString().slice(0, 10)}.csv`
+      a.download = `${state.settings.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'clinic'}-audit-${localDay()}.csv`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -118,7 +120,7 @@ export function ActivityLog() {
         </Field>
         {range === 'day' && (
           <Field label="Day">
-            {id => <input id={id} type="date" className="input" value={day} max={new Date().toISOString().slice(0, 10)} onChange={e => setDay(e.target.value)} />}
+            {id => <input id={id} type="date" className="input" value={day} max={localDay()} onChange={e => setDay(e.target.value)} />}
           </Field>
         )}
         <div className="tm-log-actions">
@@ -138,7 +140,8 @@ export function ActivityLog() {
         ) : (
           <ol className="tm-log">
             {rows.slice(0, limit).map(e => {
-              const link = targetLink(state, e)
+              const to = targetLink(state, e)
+              const link = to && canOpen(me, to.page) ? to : null
               const kinds = kindsOf(e)
               return (
                 <li key={e.id} className="tm-log-row">

@@ -45,6 +45,9 @@ export const ROLE_INFO: Record<Role, { summary: string; can: string; cannot: str
 
 export const roleLabel = (r: Role) => ROLE_LABEL[r]
 
+/** 'Dr Hannah Clarke' -> 'Hannah', 'Priya Nair' -> 'Priya' (for buttons and titles). */
+export const firstName = (name: string) => name.replace(/^Dr\.? /, '').split(/\s+/)[0]
+
 export function groupedPermissions(): { group: string; items: typeof PERMISSIONS }[] {
   const out: { group: string; items: typeof PERMISSIONS }[] = []
   for (const p of PERMISSIONS) {

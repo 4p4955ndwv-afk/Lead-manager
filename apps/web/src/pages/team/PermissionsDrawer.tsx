@@ -5,7 +5,7 @@ import type { Permission, User } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
 import { PERMISSIONS } from '../../lib/permissions'
 import { iso, uid } from '../../lib/time'
-import { SENSITIVE, groupedPermissions, permLabel, roleHas } from './roles'
+import { SENSITIVE, firstName, groupedPermissions, permLabel, roleHas } from './roles'
 import { blockedReason } from './PersonDialogs'
 
 type Draft = Partial<Record<Permission, boolean>>
@@ -66,7 +66,7 @@ export function PermissionsDrawer({ user, onClose }: { user: User | null; onClos
   return (
     <>
       <Drawer open={!!user && !confirming} onClose={close} width={500}
-        title={`${user.name.split(' ')[0]}’s permissions`}
+        title={`${firstName(user.name)}’s permissions`}
         footer={readOnly ? <Button variant="secondary" onClick={onClose}>Close</Button> : <>
           <Button variant="ghost" onClick={() => setDraft(saved)} disabled={!changes.length}>Undo changes</Button>
           <Button variant="primary" disabled={!changes.length} onClick={() => setConfirming(true)}>{changes.length ? `Save ${changes.length} change${changes.length > 1 ? 's' : ''}` : 'No changes'}</Button>
@@ -80,7 +80,7 @@ export function PermissionsDrawer({ user, onClose }: { user: User | null; onClos
             </div>
           </div>
           {blocked ? <p className="small tm-callout">{blocked}</p> : (
-            <p className="small muted">Switches show what {user.name.split(' ')[0]} can do. Anything that differs from the {ROLE_LABEL[user.role]} template is a personal override and is saved with a reason in the audit log.</p>
+            <p className="small muted">Switches show what {firstName(user.name)} can do. Anything that differs from the {ROLE_LABEL[user.role]} template is a personal override and is saved with a reason in the audit log.</p>
           )}
           {groupedPermissions().map(g => (
             <section key={g.group} className="stack" aria-label={g.group}>

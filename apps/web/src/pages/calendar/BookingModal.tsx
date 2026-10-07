@@ -59,6 +59,13 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
   const episode = client ? activeEpisode(state, client.id) : undefined
   const proc = procOf(state, procedureId)
   const planHit = client ? planItemFor(state, client.id, episode?.id, procedureId) : undefined
+  /** Suggested practitioner: whoever saw the client last, else someone who works at that branch (on shift first). */
+  const suggestPrac = (clientId: string | undefined, branchId: string | undefined) => {
+    const last = clientId ? state.appointments.filter(a => a.clientId === clientId).sort((a, b) => b.start.localeCompare(a.start))[0] : undefined
+    if (last && clinicians.some(u => u.id === last.practitionerId)) return last.practitionerId
+    const here = clinicians.filter(u => !branchId || u.branchIds.includes(branchId))
+    return (here.find(u => u.onShift) ?? here[0] ?? clinicians.find(u => u.onShift) ?? clinicians[0])?.id ?? ''
+  }
 
   // Fill sensible defaults whenever the modal opens.
   useEffect(() => {
@@ -81,10 +88,8 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
     setDeposit(t === 'consultation' && (p?.depositPct ?? 0) > 0 ? 'due' : 'none')
     setNotes('')
     setConfirmed(false)
-    const lastAppt = c ? state.appointments.filter(a => a.clientId === c.id).sort((a, b) => b.start.localeCompare(a.start))[0] : undefined
-    const prac = preset.practitionerId ?? lastAppt?.practitionerId ?? clinicians.find(u => u.onShift)?.id ?? clinicians[0]?.id ?? ''
-    setPractitionerId(prac)
     const branch = c?.branchId ?? state.rooms.find(r => r.id === preset.roomId)?.branchId ?? me.branchIds[0] ?? state.branches[0]?.id
+    setPractitionerId(preset.practitionerId ?? suggestPrac(c?.id, branch))
     const branchRooms = state.rooms.filter(r => r.branchId === branch)
     setRoomId(preset.roomId ?? (pid === 'p_lhr' ? branchRooms.find(r => /laser/i.test(r.name))?.id : undefined) ?? branchRooms[0]?.id ?? state.rooms[0]?.id ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,6 +116,8 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
     }
     const branchRooms = state.rooms.filter(r => r.branchId === c.branchId)
     if (!branchRooms.some(r => r.id === roomId) && branchRooms[0]) setRoomId(branchRooms[0].id)
+    // Keep a practitioner chosen from the grid; otherwise suggest one who works where this client is seen.
+    if (!preset.practitionerId) setPractitionerId(suggestPrac(c.id, c.branchId))
   }
 
   const changeType = (t: AppointmentType) => {
@@ -168,7 +175,8 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
   const past = !Number.isNaN(startMs) && startMs < Date.now() - 5 * MIN
   const bookingToday = dayMs != null && dayMs === new Date(new Date().setHours(0, 0, 0, 0)).getTime()
   const lateFinish = !Number.isNaN(startMs) && minutesOfDay(startMs) + duration > DAY_END_MIN
-  const clashes = !Number.isNaN(startMs) && practitionerId && roomId
+  // No clash noise while the whole form is blocked for an under-18 client.
+  const clashes = !clientBlocked && !Number.isNaN(startMs) && practitionerId && roomId
     ? findClashes(state, { start: startMs, end: endMs, practitionerId, roomId, clientId: client?.id })
     : undefined
   const clash = clashes ? hasClash(clashes) : false
@@ -264,7 +272,7 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
                   {client.ageVerified ? <Chip tone="ok" icon="shield">Age verified</Chip> : <Chip tone="warn" icon="shield">Age not verified</Chip>}
                 </div>
                 <span className="small muted truncate">
-                  {maskPhone(client.phone, showPhone)}
+                  {client.phone ? maskPhone(client.phone, showPhone) : 'No phone'}
                   {client.handles.instagram ? ` · ${client.handles.instagram}` : client.handles.tiktok ? ` · ${client.handles.tiktok}` : ''}
                   {episode && episode.number > 1 ? ` · Returning client, journey ${episode.number}` : ''}
                 </span>
@@ -291,7 +299,7 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
                       <Avatar name={c.name} size={28} />
                       <span className="grow stack" style={{ gap: 0 }}>
                         <span className="strong truncate">{c.name}</span>
-                        <span className="tiny muted truncate">{maskPhone(c.phone, showPhone)} · {c.handles.instagram ?? c.handles.tiktok ?? 'No handle'}</span>
+                        <span className="tiny muted truncate">{c.phone ? maskPhone(c.phone, showPhone) : 'No phone'} · {c.handles.instagram ?? c.handles.tiktok ?? 'No handle'}</span>
                       </span>
                       {ep && <StageBadge stage={ep.stage} exit={ep.exit} />}
                     </button>
@@ -307,7 +315,7 @@ export function BookingModal({ open, preset, onClose, onBooked }: {
               <div className="stack" style={{ gap: 4 }}>
                 <strong>{age.title}</strong>
                 <span className="small">{age.detail}</span>
-                <span className="small">{clientBlocked ? 'If this is wrong, check photo ID in person and record it on the client record. Only then can a booking be made.' : 'Choose another treatment below, or book this one once they are old enough.'}</span>
+                <span className="small">{clientBlocked ? 'If this is wrong, check photo ID in person and correct the client record (date of birth and age check). Only then can a booking be made.' : 'Choose another treatment below, or book this one once they are old enough.'}</span>
               </div>
             </div>
           )}

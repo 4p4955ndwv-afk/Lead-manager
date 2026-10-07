@@ -143,7 +143,7 @@
 .ca-wday.is-today .ca-wday-head { background: var(--accent-soft); box-shadow: inset 0 3px 0 var(--accent); }
 .ca-wday.is-today .ca-wday-num, .ca-wday.is-today .ca-wday-dow { color: var(--accent); }
 .ca-wday-list { display: grid; align-content: start; gap: 6px; padding: 8px; min-width: 0; }
-.ca-wday-empty { font-size: 12px; color: var(--faint); padding: 4px 2px; }
+.ca-wday-empty { font-size: 12px; color: var(--muted); padding: 4px 2px; }
 .ca-witem { display: grid; gap: 1px; padding: 5px 7px; overflow: hidden; }
 .ca-witem-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; }
 .ca-witem-time { font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
@@ -231,7 +231,7 @@
 .ca-callout-warn strong { color: var(--warn); }
 .ca-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .ca-fieldset:disabled { opacity: .5; }
-.ca-form-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.ca-form-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; align-items: start; }
 .ca-form-tight { gap: 10px; }
 .ca-note { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .ca-note svg { flex: none; }

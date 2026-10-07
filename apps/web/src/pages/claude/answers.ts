@@ -1,6 +1,6 @@
 // Built-in demo answers, used when live Claude isn't available. Each one reads the same permission-filtered view
 // of the store that the snapshot uses, so a coordinator never sees revenue and phones stay masked where they should.
-import type { AiMode, Client, DemoState, Episode } from '../../lib/types'
+import type { AiMode, Appointment, Client, DemoState, Episode } from '../../lib/types'
 import { CHANNEL_LABEL, STAGES, STAGE_LABEL } from '../../lib/types'
 import { activeEpisode, userName } from '../../lib/store'
 import { canOpen } from '../../lib/permissions'
@@ -18,6 +18,15 @@ const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? o
 const fold = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 /** Lower-cases the first letter for use mid-sentence, leaving names and acronyms alone: 'Hair transplant (FUE)' -> 'hair transplant (FUE)', 'AI paused' unchanged. */
 const lcFirst = (t: string) => (/^\p{Lu}[^\p{Lu}]/u.test(t) ? t[0].toLowerCase() + t.slice(1) : t)
+/** Why a chat is waiting for a person, as a phrase that reads well mid-sentence. */
+const REASON_TEXT: Record<string, string> = {
+  'Co-pilot: draft ready': 'an AI draft is waiting to be approved',
+  'Shadow mode: staff reply': 'shadow mode, so a person writes the reply',
+  'AI paused (kill switch)': 'AI replies are paused',
+  'Opted out earlier: review': 'they opted out earlier',
+  'Low confidence': 'the AI wasn’t confident enough to reply',
+}
+const reasonText = (r: string | undefined) => (r ? REASON_TEXT[r] ?? lcFirst(r) : 'the chat needs a person')
 
 /** The client a question is about: full name first, then a unique first name. */
 export function findClient(s: DemoState, q: string): Client | undefined {
@@ -33,6 +42,7 @@ export function demoAnswer(c: Ctx, question: string): string {
   const q = question.toLowerCase()
   const client = findClient(c.s, question)
   if (/shared (a|their)? ?(phone )?numbers?|haven'?t been called|not been called|uncalled/.test(q)) return uncalled(c)
+  if (/apple business manager|managed google play|(distribut|roll ?out).*(phones?|app)/.test(q)) return mobileRollout(c)
   if (/draft|write/.test(q) && /follow.?up|message|reply/.test(q)) return client ? draftFollowUp(c, client) : 'Who should the follow-up go to? Ask again with their name, for example "Draft a follow-up message for Chloe Martin".'
   if (/tiktok/.test(q) && /instagram/.test(q)) return channels(c)
   if (/due (a|for a|their next)? ?session|sessions? (due|in the next)|next (7|seven) days/.test(q)) return sessionsDue(c)
@@ -42,7 +52,7 @@ export function demoAnswer(c: Ctx, question: string): string {
   if (/pipeline|going cold|at risk/.test(q)) return pipelineRisk(c)
   if (/proposal/.test(q)) return proposal(c, question)
   if (/\bai\b|autopilot|co-?pilot|unedited|playbook|guardrail|handoff/.test(q)) return aiPerformance(c)
-  if (/diary|calendar|confirm|free slots|double book|clinic list/.test(q)) return calendar(c)
+  if (/diary|calendar|confirm|free slots|double book|clinic list/.test(q)) return calendar(c, q)
   if (/analytics|previous period|compared with|what moved|this week|last \d+ days/.test(q)) return analytics(c, q)
   if (/payment|overdue|instalment|deposit|chase/.test(q)) return payments(c)
   return fallback(c)
@@ -105,7 +115,7 @@ function today(c: Ctx): string {
   }
   if (f.allChats || f.assignedChats) {
     if (!chats.length) out.push(f.allChats ? '- **No chats need a person.**' : '- **No chats assigned to you need a person.**')
-    else out.push(`- **${plural(chats.length, 'chat')} ${chats.length === 1 ? 'needs' : 'need'} a person**${risky.length ? ` (${risky.map(v => `${nameOf(c, v.clientId)}: ${lcFirst(v.needsHumanReason ?? '')}`).join('; ')})` : ''}.`)
+    else out.push(`- **${plural(chats.length, 'chat')} ${chats.length === 1 ? 'needs' : 'need'} a person**${risky.length ? ` (${risky.map(v => `${nameOf(c, v.clientId)}: ${reasonText(v.needsHumanReason)}`).join('; ')})` : ''}.`)
   }
   out.push(`- **${plural(appts.length, 'appointment')} today**${nextAppt ? `; next is ${nameOf(c, nextAppt.clientId)} at ${timeOf(nextAppt.start)} (${nextAppt.type.replace('_', '-')})` : ''}${unconfirmed.length ? `. ${plural(unconfirmed.length, 'booking')} in the next two days ${unconfirmed.length === 1 ? 'is' : 'are'} still unconfirmed` : ''}.`)
   if (plans.length) out.push(`- **${plural(plans.length, 'treatment plan')} waiting for a decision**: ${plans.map(p => nameOf(c, p.clientId)).join(', ')}.`)
@@ -115,7 +125,7 @@ function today(c: Ctx): string {
     if (od.length) out.push(`- **${plural(od.length, 'payment')} overdue** (${fmtMoney(c, sum(od.map(p => p.amount)))}): ${od.map(p => nameOf(c, p.clientId)).join(', ')}.`)
   }
   const firstDo = overdue[0] ? `call ${nameOf(c, overdue[0].clientId)}, who is past the call deadline`
-    : risky[0] ? `reply to ${nameOf(c, risky[0].clientId)} (${lcFirst(risky[0].needsHumanReason ?? '')})`
+    : risky[0] ? `reply to ${nameOf(c, risky[0].clientId)} (${reasonText(risky[0].needsHumanReason)})`
       : callsOpen[0] ? `call ${nameOf(c, callsOpen[0].clientId)} (${dueText(callsOpen[0].dueAt, now)})`
         : chats[0] ? `clear the ${plural(chats.length, 'chat')} waiting in the inbox`
           : unconfirmed[0] ? `confirm ${nameOf(c, unconfirmed[0].clientId)}’s appointment`
@@ -155,7 +165,9 @@ function draftFollowUp(c: Ctx, cl: Client): string {
   const f = flags(c)
   const ep = activeEpisode(s, cl.id)
   const plan = s.plans.filter(p => p.clientId === cl.id && (p.status === 'proposed' || p.status === 'accepted')).sort((a, b) => ms(b.createdAt) - ms(a.createdAt))[0]
-  const senderId = me.role === 'coordinator' || me.role === 'frontdesk' ? me.id : cl.ownerId ?? me.id
+  // the message comes from whoever will send it: the viewer if they handle chats, else the client's owner, else the coordinator on shift
+  const coordinator = s.users.find(u => u.role === 'coordinator' && u.status === 'active' && u.onShift) ?? s.users.find(u => u.role === 'coordinator' && u.status === 'active')
+  const senderId = me.role === 'coordinator' || me.role === 'frontdesk' ? me.id : cl.ownerId ?? (c.can('chats.reply') ? me.id : coordinator?.id ?? me.id)
   const sender = firstName(userName(s, senderId))
   const first = firstName(cl.name)
   const org = s.settings.orgName
@@ -184,8 +196,9 @@ function draftFollowUp(c: Ctx, cl: Client): string {
     const w = replyWindow(conv, now)
     if (w.open) where.push(`Send it from the Inbox: the ${CHANNEL_LABEL[conv.channel]} reply window is open for another ${Math.max(1, Math.round(w.msLeft / HOUR))} h.`)
     else if (w.humanAgentOpen) where.push(`The 24-hour ${CHANNEL_LABEL[conv.channel]} window has closed, but a person can still reply with the Human Agent tag until ${shortDate(w.humanAgentUntil!)}.`)
-    else where.push(`${first}’s ${CHANNEL_LABEL[conv.channel]} chat window closed ${ago(w.closesAt, now)}, so ${cl.consent.whatsapp ? 'send it as a WhatsApp message (they have consented to WhatsApp)' : cl.consent.sms ? 'send it by SMS (they have consented to SMS)' : 'call them instead; they haven’t consented to WhatsApp or SMS'}.`)
-  } else where.push(cl.consent.whatsapp ? 'Send it on WhatsApp; they have consented.' : 'Call them; there is no open chat to reply in.')
+    else where.push(`${first}’s ${CHANNEL_LABEL[conv.channel]} chat window closed ${ago(w.closesAt, now)}, so ${!cl.phone ? 'wait for them to message again: there is no number on file to call or text' : cl.consent.whatsapp ? 'send it as a WhatsApp message (they have consented to WhatsApp)' : cl.consent.sms ? 'send it by SMS (they have consented to SMS)' : 'call them instead; they haven’t consented to WhatsApp or SMS'}.`)
+  } else where.push(!cl.phone ? 'There is no open chat and no number on file, so it can only be sent once they message again.' : cl.consent.whatsapp ? 'Send it on WhatsApp; they have consented.' : 'Call them; there is no open chat to reply in.')
+  if (!c.can('chats.reply')) where.unshift(`Your access can’t send messages, so ask ${senderId === me.id ? 'a coordinator' : sender} to send it.`)
   if (cl.language !== 'en') where.push(`${first} usually writes in ${({ es: 'Spanish', ar: 'Arabic', fr: 'French' } as Record<string, string>)[cl.language] ?? cl.language}; consider sending it in that language.`)
   const note = s.notes.find(n => n.clientId === cl.id && (!n.clinical || f.clinical))
   return [
@@ -237,8 +250,8 @@ function clientSummary(c: Ctx, cl: Client): string {
   const lastIn = conv ? [...conv.messages].reverse().find(m => m.author === 'client') : undefined
   const overduePay = f.payments ? s.payments.filter(p => p.clientId === cl.id && (p.status === 'overdue' || (p.status === 'due' && ms(p.dueAt) < now))) : []
   const out: string[] = [`**${cl.name}: ${stageText(ep)}${ep && ep.number > 1 ? ` (returning client, journey ${ep.number})` : ''}**`]
-  out.push(`- Came from ${CHANNEL_LABEL[cl.source.channel]} (${cl.source.detail}) ${ago(cl.createdAt, now)}${cl.ownerId ? `; looked after by ${userName(s, cl.ownerId)}` : ''}. Phone: ${phoneOf(c, cl)}.`)
-  if (ep?.interests.length) out.push(`- Interested in ${ep.interests.map(i => procName(c, i)).join(' and ')}.`)
+  out.push(`- Came from ${CHANNEL_LABEL[cl.source.channel]} (${cl.source.detail}) ${ago(cl.createdAt, now)}${cl.ownerId ? `; looked after by ${userName(s, cl.ownerId)}` : ''}. Phone: ${cl.phone ? phoneOf(c, cl) : 'not shared yet'}.`)
+  if (ep?.interests.length) out.push(`- Interested in ${ep.interests.map(i => lcFirst(procName(c, i))).join(' and ')}.`)
   if (plan) {
     const done = sum(plan.items.map(i => i.sessions.filter(x => x.status === 'done').length))
     const total = sum(plan.items.map(i => i.sessionsTotal))
@@ -247,7 +260,7 @@ function clientSummary(c: Ctx, cl: Client): string {
   if (next) out.push(`- Next appointment: ${next.type.replace('_', '-')} on ${shortDate(next.start)} at ${timeOf(next.start)} (${next.status}).`)
   tasks.forEach(t => out.push(`- Open task: ${t.title} · ${userName(s, t.assignedTo)} · ${dueText(t.dueAt, now)}${t.escalationLevel ? ' · escalated' : ''}.`))
   overduePay.forEach(p => out.push(`- Overdue ${p.kind}: ${fmtMoney(c, p.amount)} since ${shortDate(p.dueAt)}.`))
-  if (canChat && lastIn) out.push(`- Last message (${ago(lastIn.at, now)}): “${safeText(c, lastIn.text)}”${conv!.needsHumanReason ? ` · ${lcFirst(conv!.needsHumanReason)}` : ''}.`)
+  if (canChat && lastIn) out.push(`- Last message (${ago(lastIn.at, now)}): “${safeText(c, lastIn.text)}”${conv!.needsHumanReason ? ` · ${reasonText(conv!.needsHumanReason)}` : ''}.`)
   const notes = s.notes.filter(n => n.clientId === cl.id && (!n.clinical || f.clinical)).slice(0, 2)
   notes.forEach(n => out.push(`- Note${n.clinical ? ' (clinical)' : ''} from ${userName(s, n.authorId)}, ${shortDate(n.at)}: “${safeText(c, n.text)}”`))
   if (!f.clinical && s.notes.some(n => n.clientId === cl.id && n.clinical)) out.push('- Clinical notes are hidden for your role.')
@@ -262,7 +275,8 @@ function nextAction(c: Ctx, cl: Client, ep: Episode | undefined): string {
   if (call && ms(call.dueAt) < now) return `call ${first} now; the call is ${dueText(call.dueAt, now)}.`
   if (call) return `call ${first} (${dueText(call.dueAt, now)}) and agree a consultation date.`
   const conv = s.conversations.find(v => v.clientId === cl.id)
-  if (conv?.needsHuman) return `reply in the inbox: ${lcFirst(conv.needsHumanReason ?? 'the chat needs a person')}.`
+  if (conv?.draft) return 'approve or edit the AI draft waiting in the inbox.'
+  if (conv?.needsHuman) return `reply in the inbox: ${reasonText(conv.needsHumanReason)}.`
   if (!ep) return 'nothing open.'
   if (ep.exit === 'nurture') return `leave ${first} in nurture; the AI will check in when they asked (${ep.exitReason ?? 'later'}).`
   if (ep.exit) return `nothing to do: the journey ended (${ep.exitReason ?? 'closed'}).`
@@ -311,9 +325,9 @@ function pipelineRisk(c: Ctx): string {
     const plan = s.plans.find(p => p.episodeId === ep.id && p.status === 'proposed')
     let why = ''
     let score = 0
-    if (overdue) { why = `${lcFirst(overdue.title)} is ${dueText(overdue.dueAt, now)}`; score = 3 }
+    if (overdue) { why = `${overdue.type === 'call' || overdue.type === 'callback' ? 'the call' : `“${overdue.title}”`} is ${dueText(overdue.dueAt, now)}`; score = 3 }
     else if (plan && now - ms(plan.createdAt) > DAY) { why = `plan proposed ${ago(plan.createdAt, now)} with no decision`; score = 2 }
-    else if (idleDays > 2) { why = `no contact for ${Math.round(idleDays)} days at ${STAGE_LABEL[ep.stage].toLowerCase()}`; score = 1 + Math.min(1, idleDays / 10) }
+    else if (idleDays > 2) { why = `no contact for ${Math.round(idleDays)} days at ${lcFirst(STAGE_LABEL[ep.stage])}`; score = 1 + Math.min(1, idleDays / 10) }
     if (score) rows.push({ name: cl.name, why, owner: cl.ownerId ? userName(s, cl.ownerId) : 'unassigned', score })
   }
   rows.sort((a, b) => b.score - a.score)
@@ -351,7 +365,7 @@ function aiPerformance(c: Ctx): string {
     const g = gateStats(s, ch, now)
     const mode: AiMode = s.ai.mode[ch]
     const gate = gateFor(mode, g)
-    out.push(`- **${CHANNEL_LABEL[ch]}** (${MODE_LABEL[mode].toLowerCase()}): ${Math.round(g.uneditedRate * 100)}% sent unedited, ${Math.round(g.editRate * 100)}% edited, ${plural(g.openIssues, 'open guardrail issue')}, handoff rate ${Math.round(g.handoffRate * 100)}%. ${gate.title}: ${gate.summary.toLowerCase()}.`)
+    out.push(`- **${CHANNEL_LABEL[ch]}** (${MODE_LABEL[mode].toLowerCase()}): ${Math.round(g.uneditedRate * 100)}% sent unedited, ${Math.round(g.editRate * 100)}% edited, ${plural(g.openIssues, 'open guardrail issue')}, handoff rate ${Math.round(g.handoffRate * 100)}%. ${gate.title}: ${gate.summary.replace(': ', ', ').toLowerCase()}.`)
     if (gate.next && gate.checks.every(x => x.met)) ready.push(`${CHANNEL_LABEL[ch]} is ready for ${MODE_LABEL[gate.next].toLowerCase()}`)
   }
   const pending = s.playbooks.find(p => p.status === 'pending')
@@ -395,23 +409,103 @@ function analytics(c: Ctx, q: string): string {
 
 // ---- calendar ---------------------------------------------------------------------------------
 
-function calendar(c: Ctx): string {
-  const { s, now } = c
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+
+/** The day or range a calendar question names, e.g. "Sunday 4 October 2026", "28 Sept – 4 Oct 2026", "1 – 7 Oct 2026". */
+function askedPeriod(q: string, now: number): { from: number; to: number; single: boolean } | null {
+  const hits = [...q.matchAll(/\b(\d{1,2})(?:\s*[–-]\s*(\d{1,2}))?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?(?:\s+(\d{4}))?/gi)]
+  if (!hits.length) return null
+  const year = Number(hits.find(h => h[4])?.[4] ?? new Date(now).getFullYear())
+  const day = (d: string, m: string, y = year) => new Date(y, MONTHS.indexOf(m.toLowerCase().slice(0, 3)), Number(d)).getTime()
+  const first = hits[0], last = hits[hits.length - 1]
+  let from = day(first[1], first[3]), to = first[2] ? day(first[2], first[3]) : day(last[1], last[3])
+  if (from > to) from = day(first[1], first[3], year - 1) // e.g. 29 Dec – 4 Jan
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return null
+  return { from, to: to + DAY, single: to === from }
+}
+
+/** Overlapping bookings for the same practitioner or room. */
+function clashes(list: Appointment[]): string[] {
+  const out: string[] = []
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+    const a = list[i], b = list[j]
+    if (ms(a.start) < ms(b.end) && ms(b.start) < ms(a.end) && (a.practitionerId === b.practitionerId || a.roomId === b.roomId)) out.push(`${shortDate(a.start)} ${timeOf(a.start)}`)
+  }
+  return [...new Set(out)]
+}
+
+/** Free stretches of an hour or more in business hours for each clinician on a day. */
+function freeTime(c: Ctx, dayStart: number, booked: Appointment[]): string[] {
+  const { s } = c
+  const [oh, om] = s.ai.businessHours.start.split(':').map(Number)
+  const [ch, cm] = s.ai.businessHours.end.split(':').map(Number)
+  if (!s.ai.businessHours.days.includes(new Date(dayStart).getDay())) return []
+  const open = dayStart + oh * HOUR + om * 60_000, close = dayStart + ch * HOUR + cm * 60_000
+  return s.users.filter(u => u.role === 'clinician' && u.status === 'active').map(u => {
+    let cur = Math.max(open, c.now)
+    const gaps: string[] = []
+    for (const a of booked.filter(x => x.practitionerId === u.id).sort((x, y) => ms(x.start) - ms(y.start))) {
+      if (ms(a.start) - cur >= HOUR) gaps.push(`${timeOf(new Date(cur).toISOString())}–${timeOf(a.start)}`)
+      cur = Math.max(cur, ms(a.end))
+    }
+    if (close - cur >= HOUR) gaps.push(`${timeOf(new Date(cur).toISOString())}–${timeOf(new Date(close).toISOString())}`)
+    return gaps.length ? `${u.name} ${gaps.slice(0, 3).join(', ')}` : ''
+  }).filter(Boolean)
+}
+
+function calendar(c: Ctx, q = ''): string {
+  const { s, me, now } = c
   const f = flags(c)
-  const appts = todaysAppointments(c)
-  const week = s.appointments.filter(a => ms(a.start) > now && ms(a.start) < now + 7 * DAY && a.status !== 'cancelled').sort((a, b) => ms(a.start) - ms(b.start))
-  const unconf = week.filter(a => a.status === 'unconfirmed')
-  const deposits = f.payments ? week.filter(a => a.deposit === 'due') : []
+  const asked = askedPeriod(q, now)
+  // "my diary" from someone with their own clinic list means their appointments only
+  const mineOnly = /\bmy (diary|calendar|clinic list)\b/.test(q) && s.appointments.some(a => a.practitionerId === me.id)
+  const scope = (a: Appointment) => a.status !== 'cancelled' && (!mineOnly || a.practitionerId === me.id)
+  const line = (a: Appointment, withDay = false) => `- ${withDay ? `${shortDate(a.start)} ` : ''}${timeOf(a.start)} ${nameOf(c, a.clientId)}: ${a.type.replace('_', '-')}${a.procedureId ? `, ${procName(c, a.procedureId)}` : ''}${a.sessionNo ? ` session ${a.sessionNo}` : ''} with ${userName(s, a.practitionerId)} (${a.status})`
+  const tail = (list: Appointment[]): string[] => {
+    const upcoming = list.filter(a => ms(a.end) > now)
+    const unconf = upcoming.filter(a => a.status === 'unconfirmed')
+    const deposits = f.payments ? upcoming.filter(a => a.deposit === 'due') : []
+    const clash = clashes(list)
+    const out: string[] = []
+    if (unconf.length) out.push(`- Still to confirm: ${unconf.map(a => `${nameOf(c, a.clientId)} (${shortDate(a.start)} ${timeOf(a.start)})`).join(', ')}.`)
+    if (deposits.length) out.push(`- Deposits due: ${deposits.map(a => nameOf(c, a.clientId)).join(', ')}.`)
+    if (!unconf.length && !deposits.length && upcoming.length) out.push(f.payments ? '- Everyone is confirmed and no deposits are outstanding.' : '- Everyone is confirmed.')
+    out.push(clash.length ? `- **Double booking** at ${clash.join(', ')}: the same practitioner or room is booked twice.` : '- No double bookings: each practitioner and room has one appointment at a time.')
+    return out
+  }
+  const who = mineOnly ? 'Your clinic list' : 'The clinic'
+
+  if (asked && !(asked.single && sameDay(asked.from, now))) {
+    const list = s.appointments.filter(a => scope(a) && ms(a.start) >= asked.from && ms(a.start) < asked.to).sort((a, b) => ms(a.start) - ms(b.start))
+    const label = asked.single ? new Date(asked.from).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) : `${shortDate(new Date(asked.from).toISOString())} to ${shortDate(new Date(asked.to - DAY).toISOString())}`
+    if (!list.length) return `**${who} has no bookings ${asked.single ? 'on' : 'from'} ${label}.**${asked.to > now ? ' Every slot in business hours is free for new consultations.' : ''}`
+    const out = [`**${label}: ${plural(list.length, 'booking')}.**`]
+    if (asked.single) list.forEach(a => out.push(line(a)))
+    else {
+      const byDay = new Map<string, number>()
+      list.forEach(a => byDay.set(shortDate(a.start), (byDay.get(shortDate(a.start)) ?? 0) + 1))
+      const [top, next] = [...byDay.entries()].sort((a, b) => b[1] - a[1])
+      out.push(`- By day: ${[...byDay.entries()].map(([d, n]) => `${d} (${n})`).join(' · ')}${top && (!next || top[1] > next[1]) ? `; busiest is ${top[0]}` : ''}.`)
+    }
+    out.push(...tail(list))
+    if (asked.single && asked.to > now) {
+      const free = freeTime(c, asked.from, list)
+      if (free.length) out.push(`- Free for new consultations (an hour or more): ${free.join('; ')}.`)
+    }
+    return out.join('\n')
+  }
+
+  const appts = todaysAppointments(c).filter(scope)
+  const week = s.appointments.filter(a => scope(a) && ms(a.start) > now && ms(a.start) < now + 7 * DAY).sort((a, b) => ms(a.start) - ms(b.start))
   const byDay = new Map<string, number>()
   week.forEach(a => byDay.set(shortDate(a.start), (byDay.get(shortDate(a.start)) ?? 0) + 1))
   const busiest = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0]
-  const out = [`**Today: ${plural(appts.length, 'appointment')}.**`]
-  appts.forEach(a => out.push(`- ${timeOf(a.start)} ${nameOf(c, a.clientId)}: ${a.type.replace('_', '-')}${a.procedureId ? `, ${procName(c, a.procedureId)}` : ''}${a.sessionNo ? ` session ${a.sessionNo}` : ''} with ${userName(s, a.practitionerId)} (${a.status})`))
+  const out = [`**Today: ${plural(appts.length, 'appointment')}${mineOnly ? ' on your list' : ''}.**`]
+  appts.forEach(a => out.push(line(a)))
+  const free = freeTime(c, startOfDay(now), appts)
+  if (free.length) out.push(`- Free today for new consultations (an hour or more): ${free.join('; ')}.`)
   out.push('', `**Next 7 days: ${plural(week.length, 'booking')}**${busiest ? `; busiest day ${busiest[0]} (${busiest[1]})` : ''}.`)
-  if (unconf.length) out.push(`- Still to confirm: ${unconf.map(a => `${nameOf(c, a.clientId)} (${shortDate(a.start)} ${timeOf(a.start)})`).join(', ')}.`)
-  if (deposits.length) out.push(`- Deposits due: ${deposits.map(a => nameOf(c, a.clientId)).join(', ')}.`)
-  if (!unconf.length && !deposits.length) out.push('- Everyone is confirmed.')
-  out.push('- No double bookings found: each practitioner and room has one appointment at a time.')
+  out.push(...tail([...appts, ...week.filter(a => !appts.includes(a))]))
   return out.join('\n')
 }
 
@@ -429,6 +523,25 @@ function payments(c: Ctx): string {
   soon.forEach(p => out.push(`- Due ${shortDate(p.dueAt)}: ${nameOf(c, p.clientId)}, ${p.kind} ${fmtMoney(c, p.amount)}`))
   if (overdue[0]) out.push('', `Chase ${nameOf(c, overdue[0].clientId)} first with a card link; it has been overdue the longest.`)
   return out.join('\n')
+}
+
+// ---- private mobile app rollout -----------------------------------------------------------------
+
+function mobileRollout(c: Ctx): string {
+  const { s } = c
+  const by = (role: 'owner' | 'manager') => firstName(s.users.find(u => u.role === role && u.status === 'active')?.name ?? (role === 'owner' ? 'the owner' : 'the manager'))
+  const owner = by('owner'), manager = by('manager')
+  return [
+    `**Private app rollout for ${s.settings.orgName}: about 4 to 6 weeks, mostly waiting on Apple and Google.**`,
+    `1. **Week 1 · ${owner}:** enrol the clinic in the Apple Developer Program as an organisation (it needs a D-U-N-S number, which can take up to 2 weeks) and open a Google Play Console account.`,
+    `2. **Week 1 · ${owner}:** create the Apple Business Manager account, and set up managed Google Play through Google Workspace or your device-management provider.`,
+    '3. **Weeks 2 to 3 · developer:** build the iOS and Android wrappers with push notifications and sign-in using each person’s own Lead Manager login.',
+    `4. **Week 3 · ${manager}:** test on 2 or 3 staff phones for a week: new-lead alerts, the 15-minute call flow and escalations.`,
+    '5. **Week 4 · developer:** submit the iOS build as a custom app (review usually takes 1 to 3 days) and publish the Android build privately to your organisation.',
+    `6. **Weeks 4 to 5 · ${manager}:** assign the app to staff devices or Managed Apple IDs, and set up work profiles on Android phones.`,
+    '',
+    'Start today with the web app: staff can install it from the browser (Settings → Mobile app) and get the same notifications while the store apps are set up.',
+  ].join('\n')
 }
 
 // ---- fallback ---------------------------------------------------------------------------------

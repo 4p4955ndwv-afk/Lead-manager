@@ -217,7 +217,7 @@ function RecentAi() {
                   <span className="row wrap grow" style={{ gap: 6 }}>
                     <button type="button" className="ai-link strong" onClick={() => actions.go('client', r.conv.clientId)}>{name}</button>
                     <ChannelBadge channel={r.conv.channel} label={false} size="sm" />
-                    {r.kind === 'shadow' ? <Chip>Shadow draft · not sent</Chip> : r.kind === 'approved' ? <Chip tone="team">Approved by {userName(state, r.msg.userId).split(' ')[0]}</Chip> : <Chip tone="accent">Sent automatically</Chip>}
+                    {r.kind === 'shadow' ? <Chip>Shadow draft · not sent</Chip> : r.kind === 'approved' ? <Chip tone="team">Approved by {userName(state, r.msg.userId).replace(/^Dr\.? /, '').split(' ')[0]}</Chip> : <Chip tone="accent">Sent automatically</Chip>}
                   </span>
                   <span className="tiny faint ai-nowrap" title={dateTime(r.msg.at)}>{ago(r.msg.at)}</span>
                   {inbox && <IconButton icon="arrowRight" size="sm" label={`Open chat with ${name}`} onClick={() => actions.go('inbox', r.conv.id)} />}

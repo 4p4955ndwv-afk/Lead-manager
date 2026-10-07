@@ -5,14 +5,14 @@ import { useStore } from '../../lib/store'
 import { canOpen } from '../../lib/permissions'
 import type { AiMode, Appointment, Payment, User } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
-import { DAY, HOUR, MIN, ago, dateTime, iso, money, ms, shortDate, timeOf, useNow } from '../../lib/time'
+import { MIN, ago, dateTime, iso, money, ms, shortDate, timeOf, useNow } from '../../lib/time'
 import { topSources } from '../analytics/data'
 import { fmtInt, fmtPct, plural } from '../analytics/format'
 import { COLOR } from '../analytics/charts'
 import { Deadline } from './parts'
 import { ageCheck } from '../calendar/helpers'
 import {
-  APPT_TYPE, MODE_HINT, MODE_LABEL, MODE_TONE, PAYMENT_KIND, STATUS_LABEL, STATUS_TONE, apptWhat, clientName, isOverdue, lastClientText, openPayments,
+  APPT_TYPE, MODE_HINT, MODE_LABEL, MODE_TONE, PAYMENT_KIND, STATUS_LABEL, STATUS_TONE, apptWhat, clientName, isOverdue, lastClientText, openPayments, unconfirmedSoon,
 } from './compute'
 
 // ---- owner / manager: team SLA -------------------------------------------------------------------
@@ -54,7 +54,7 @@ export function TeamSla() {
                       {escalated.length > 0 && <Chip tone="warn">{fmtInt(escalated.length)} escalated</Chip>}
                     </span>
                   </span>
-                  <span className="td-item-trail">{next ? <Deadline due={next.dueAt} /> : <span className="tiny muted">Nothing due</span>}</span>
+                  <span className="td-item-trail">{next ? <Deadline due={next.dueAt} /> : <span className="tiny muted td-nowrap">{overdue.length ? 'Nothing else due' : 'Nothing due'}</span>}</span>
                 </button>
               </li>
             )
@@ -181,7 +181,7 @@ export function ClinicList() {
                     </span>
                     <span className="small">{apptWhat(state, a)}</span>
                     {can('clinical.view')
-                      ? note ? <span className="tiny muted td-clamp">Last note ({shortDate(note.at)}): {note.text}</span> : <span className="tiny faint">No clinical notes yet</span>
+                      ? note ? <span className="tiny muted td-clamp">Last note ({shortDate(note.at)}): {note.text}</span> : <span className="tiny muted">No clinical notes yet</span>
                       : <Locked>Clinical notes are restricted</Locked>}
                   </span>
                   <span className="td-item-trail"><Icon name="chevronRight" size={16} /></span>
@@ -430,24 +430,30 @@ export function Arrivals() {
 export function Unconfirmed() {
   const { state, actions } = useStore()
   const now = useNow(60_000)
-  const list = state.appointments.filter(a => a.status === 'unconfirmed' && ms(a.start) > now - HOUR && ms(a.start) < now + 2 * DAY).sort((a, b) => ms(a.start) - ms(b.start))
+  // Rows confirmed here stay in place (marked done) until the page is left, so the list never shifts under a
+  // second click and confirms the wrong person.
+  const [doneIds, setDoneIds] = useState<string[]>([])
+  const list = [...unconfirmedSoon(state, now), ...state.appointments.filter(a => doneIds.includes(a.id) && a.status !== 'unconfirmed')]
+    .sort((a, b) => ms(a.start) - ms(b.start))
   return (
     <Card title="Unconfirmed appointments" subtitle="Today and tomorrow. Confirm by phone or WhatsApp, then mark them here." padded={false} className="td-card">
       {list.length === 0 ? (
-        <EmptyState icon="check" title="Everyone is confirmed" body="Appointments in the next two days that nobody has confirmed show here. Reminders go out 2 days and 1 day before." />
+        <EmptyState icon="check" title="Everyone is confirmed" body="Appointments today and tomorrow that nobody has confirmed show here. Reminders go out 2 days and 1 day before." />
       ) : (
         <ul className="td-list">
           {list.map(a => {
             const client = state.clients.find(c => c.id === a.clientId)
             return (
               <li key={a.id} className="td-item td-item-static">
-                <span className="td-item-lead td-slot-time num"><span className="strong">{timeOf(a.start)}</span><span className="tiny muted">{new Date(a.start).toDateString() === new Date(now).toDateString() ? 'Today' : 'Tomorrow'}</span></span>
+                <span className="td-item-lead td-slot-time num"><span className="strong">{timeOf(a.start)}</span><span className="tiny muted">{new Date(a.start).toDateString() === new Date(now).toDateString() ? 'Today' : ms(a.start) < now ? 'Yesterday' : 'Tomorrow'}</span></span>
                 <span className="td-item-main">
                   <span className="td-item-title"><span className="strong truncate">{client?.name ?? 'Unknown client'}</span>{a.deposit === 'due' && <Chip tone="warn" icon="card">Deposit due</Chip>}</span>
                   <span className="tiny muted">{apptWhat(state, a, false)} · reminders {a.reminders.d2 || a.reminders.d1 ? 'sent' : 'not sent yet'}{client && !client.consent.whatsapp ? ' · no WhatsApp consent' : ''}</span>
                 </span>
                 <span className="td-item-trail td-actions">
-                  {client && ageCheck(state, client, a.procedureId).blocked ? <Button size="sm" variant="ghost" icon="alert" onClick={() => actions.go('calendar', a.id)}>Age check: open</Button> : <Button size="sm" variant="secondary" icon="check" onClick={() => {
+                  {a.status !== 'unconfirmed' ? <span className="tiny muted row td-nowrap" style={{ gap: 5 }}><Icon name="check" size={14} />{STATUS_LABEL[a.status]}</span>
+                  : client && ageCheck(state, client, a.procedureId).blocked ? <Button size="sm" variant="ghost" icon="alert" onClick={() => actions.go('calendar', a.id)}>Age check: open</Button> : <Button size="sm" variant="secondary" icon="check" onClick={() => {
+                    setDoneIds(ids => [...ids, a.id])
                     actions.setAppointmentStatus(a.id, 'confirmed')
                     actions.update(d => { const x = d.appointments.find(y => y.id === a.id); if (x) x.reminders.confirmedVia = 'phone' })
                     actions.toast(`${client?.name ?? 'Appointment'} confirmed for ${timeOf(a.start)}`, 'success')

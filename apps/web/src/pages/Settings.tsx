@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { EmptyState, PageHeader, Tabs } from '../components/ui'
 import type { IconName } from '../components/icons'
 import { useStore } from '../lib/store'
@@ -15,6 +16,15 @@ type Tab = 'organisation' | 'channels' | 'notifications' | 'prices' | 'integrati
 
 export default function Settings() {
   const { state, can, route, actions } = useStore()
+  const tabsRef = useRef<HTMLDivElement>(null)
+  // keep the active tab visible when the tab strip scrolls sideways (phones, deep links such as #settings~mobile)
+  useEffect(() => {
+    const strip = tabsRef.current?.querySelector<HTMLElement>('.tabs')
+    const active = strip?.querySelector<HTMLElement>('.tab.is-active')
+    if (!strip || !active) return
+    const a = active.getBoundingClientRect(), b = strip.getBoundingClientRect()
+    if (a.left < b.left || a.right > b.right) strip.scrollLeft += a.left - b.left - 16
+  }, [route.id])
 
   if (!can('settings.manage')) {
     return (
@@ -43,7 +53,7 @@ export default function Settings() {
   return (
     <div className="page st-page">
       <PageHeader eyebrow="Admin" title="Settings" subtitle={`How ${state.settings.orgName} is connected and configured. Every change is saved to the audit log.`} />
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={tabs} />
+      <div ref={tabsRef}><Tabs<Tab> value={tab} onChange={setTab} tabs={tabs} /></div>
       <div role="tabpanel" aria-label={tabs.find(t => t.id === tab)?.label}>
         {tab === 'organisation' && <Organisation />}
         {tab === 'channels' && <Channels />}

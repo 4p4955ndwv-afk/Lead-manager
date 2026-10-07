@@ -1,5 +1,5 @@
 // Appointment details: who, what, where and when, reminders and notes, plus the actions the clinic takes on the day.
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Appointment, DemoState, Role, User } from '../../lib/types'
 import { useStore, userName } from '../../lib/store'
 import { maskPhone } from '../../lib/permissions'
@@ -45,6 +45,10 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   const [mTime, setMTime] = useState('10:00')
   const [mPrac, setMPrac] = useState('')
   const [mRoom, setMRoom] = useState('')
+  // The footer changes as soon as an action runs (Mark arrived turns into Complete in the same spot), so the second
+  // click of a double click must not land on the next action. Guarded clicks are ignored for a moment after one runs.
+  // Buttons that open a dialog are not guarded: the dialog covers the footer.
+  const guardUntil = useRef(0)
 
   useEffect(() => {
     setMode('view')
@@ -83,6 +87,13 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
     : inProgress ? 'Happening now' : started ? `Started ${ago(a.start, now)}` : `Starts ${until(a.start, now)}`
 
   // ---- actions ---------------------------------------------------------------------------------
+  const hold = () => { guardUntil.current = Date.now() + 700 }
+  const once = (fn: () => void) => () => {
+    if (Date.now() < guardUntil.current) return
+    hold()
+    fn()
+  }
+
   const releasePlanSession = () => {
     if (a.type !== 'session') return
     actions.update(d => {
@@ -137,6 +148,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   }
 
   const noShow = (reason: string) => {
+    hold()
     const owner = rebookOwner(state)
     pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'no_show', reason || undefined)
@@ -145,6 +157,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   }
 
   const cancel = (reason: string) => {
+    hold()
     pendingYes.delete(a.id)
     actions.setAppointmentStatus(a.id, 'cancelled', reason)
     releasePlanSession()
@@ -237,6 +250,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
   const canMove = !Number.isNaN(newStart) && !movePast && !unchanged && !!mPrac && !!mRoom
 
   const doMove = (reason?: string) => {
+    hold()
     const newRoom = state.rooms.find(r => r.id === mRoom)
     const fromText = `${mediumDay(startMs)} ${hm(startMs)}`
     const toText = `${mediumDay(newStart)} ${hm(newStart)}`
@@ -293,29 +307,29 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
     footer = <Locked>Only staff who book appointments can change this</Locked>
   } else if (mode === 'move') {
     footer = <>
-      <Button variant="ghost" onClick={() => setMode('view')}>Back</Button>
+      <Button variant="ghost" onClick={once(() => setMode('view'))}>Back</Button>
       {moveClash && canMove
         ? <Button variant="danger" icon="alert" onClick={() => setDialog('move-override')}>Move anyway…</Button>
-        : <Button variant="primary" icon="calendar" disabled={!canMove} onClick={() => doMove()}>{Number.isNaN(newStart) ? 'Move' : `Move to ${mediumDay(newStart)}, ${hm(newStart)}`}</Button>}
+        : <Button variant="primary" icon="calendar" disabled={!canMove} onClick={once(() => doMove())}>{Number.isNaN(newStart) ? 'Move' : `Move to ${mediumDay(newStart)}, ${hm(newStart)}`}</Button>}
     </>
   } else {
     footer = (
       <div className="ca-dr-actions">
         <div className="ca-dr-actions-secondary">
-          {open && !ageBlocked && <Button size="sm" variant="ghost" icon="calendar" onClick={startMove}>Reschedule</Button>}
+          {open && !ageBlocked && <Button size="sm" variant="ghost" icon="calendar" onClick={once(startMove)}>Reschedule</Button>}
           {open && started && <Button size="sm" variant="ghost" icon="x" onClick={() => setDialog('noshow')}>No-show</Button>}
           {open && <Button size="sm" variant="ghost" icon="trash" onClick={() => setDialog('cancel')}>Cancel</Button>}
           {a.status === 'arrived' && <Button size="sm" variant="ghost" icon="x" onClick={() => setDialog('noshow')}>Left without treatment</Button>}
         </div>
         {ageBlocked && !open && a.status !== 'arrived' && <span className="small muted">No further actions until the client's age is checked.</span>}
         {!ageBlocked && <div className="ca-dr-actions-primary">
-          {open && !started && <Button size="sm" variant="secondary" icon="bell" onClick={sendReminder}>Send reminder now</Button>}
-          {a.status === 'unconfirmed' && <Button size="sm" variant={isToday ? 'secondary' : 'primary'} icon="check" onClick={confirm}>Confirm</Button>}
-          {open && isToday && <Button size="sm" variant="primary" icon="pin" onClick={arrive}>Mark arrived</Button>}
-          {(a.status === 'arrived' || (open && started)) && <Button size="sm" variant="primary" icon="check" onClick={complete}>{a.type === 'session' ? 'Complete session' : 'Complete'}</Button>}
-          {a.status === 'completed' && a.type === 'session' && nextSession && <Button size="sm" variant="primary" icon="plus" onClick={bookNext}>Book session {nextSession.no}</Button>}
-          {a.status === 'completed' && !(a.type === 'session' && nextSession) && <Button size="sm" variant="secondary" icon="plus" onClick={bookFollowUp}>Book a follow-up</Button>}
-          {(a.status === 'no_show' || a.status === 'cancelled') && <Button size="sm" variant="primary" icon="refresh" onClick={rebook}>Rebook {first}</Button>}
+          {open && !started && <Button size="sm" variant="secondary" icon="bell" onClick={once(sendReminder)}>Send reminder now</Button>}
+          {a.status === 'unconfirmed' && <Button size="sm" variant={isToday ? 'secondary' : 'primary'} icon="check" onClick={once(confirm)}>Confirm</Button>}
+          {open && isToday && <Button size="sm" variant="primary" icon="pin" onClick={once(arrive)}>Mark arrived</Button>}
+          {(a.status === 'arrived' || (open && started)) && <Button size="sm" variant="primary" icon="check" onClick={once(complete)}>{a.type === 'session' ? 'Complete session' : 'Complete'}</Button>}
+          {a.status === 'completed' && a.type === 'session' && nextSession && <Button size="sm" variant="primary" icon="plus" onClick={once(bookNext)}>Book session {nextSession.no}</Button>}
+          {a.status === 'completed' && !(a.type === 'session' && nextSession) && <Button size="sm" variant="secondary" icon="plus" onClick={once(bookFollowUp)}>Book a follow-up</Button>}
+          {(a.status === 'no_show' || a.status === 'cancelled') && <Button size="sm" variant="primary" icon="refresh" onClick={once(rebook)}>Rebook {first}</Button>}
         </div>}
       </div>
     )
@@ -437,7 +451,7 @@ export function ApptDrawer({ appointmentId, onClose, onBook }: {
                 <span className="row wrap" style={{ gap: 6 }}>
                   {a.deposit === 'paid' ? <Chip tone="ok" icon="check">Paid</Chip> : a.deposit === 'due' ? <Chip tone="warn">Due</Chip> : <span className="muted">No deposit needed</span>}
                   {depositPay && a.deposit !== 'none' && can('payments.view') && <span className="num">{money(depositPay.amount, state.settings.currency)}</span>}
-                  {a.deposit === 'due' && can('payments.take') && a.status !== 'cancelled' && <Button size="sm" variant="ghost" icon="card" onClick={markDepositPaid}>Mark paid</Button>}
+                  {a.deposit === 'due' && can('payments.take') && a.status !== 'cancelled' && <Button size="sm" variant="ghost" icon="card" onClick={once(markDepositPaid)}>Mark paid</Button>}
                 </span>
               )],
               ['Phone', client ? maskPhone(client.phone, can('clients.view_phone')) : '—'],

@@ -26,8 +26,12 @@ export function AgendaView({ state, from, days, appts, selectedId, symbol, onOpe
         if (!items.length) {
           return (
             <div key={d} className="ca-agenda-empty">
-              <button type="button" className="ca-agenda-daylink" onClick={() => onPickDay(d)}>{rel ? `${rel} · ` : ''}{label}</button>
-              <span className="faint small">Nothing booked</span>
+              <button type="button" className="ca-agenda-daylink" onClick={() => onPickDay(d)} aria-label={`Open ${label} in the day view`}>
+                {rel ? `${rel} · ` : ''}
+                <span className="ca-date-long">{label}</span>
+                <span className="ca-date-short" aria-hidden="true">{mediumDay(d)}</span>
+              </button>
+              <span className="muted small">Nothing booked</span>
             </div>
           )
         }
@@ -53,7 +57,7 @@ export function AgendaView({ state, from, days, appts, selectedId, symbol, onOpe
                       aria-label={`${hm(a.start)} to ${hm(a.end)}, ${client?.name ?? 'Client'}, ${apptLine(state, a)}, ${STATUS_LABEL[a.status]}. Open details`}>
                       <span className="ca-arow-time num">
                         <span className="strong">{hm(a.start)}</span>
-                        <span className="faint tiny">{durationLabel(apptMinutes(a))}</span>
+                        <span className="muted tiny">{durationLabel(apptMinutes(a))}</span>
                       </span>
                       <span className="ca-arow-bar" aria-hidden="true" />
                       <span className="ca-arow-main">

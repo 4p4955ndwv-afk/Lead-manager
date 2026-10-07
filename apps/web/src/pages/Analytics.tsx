@@ -3,6 +3,7 @@ import { Button, Card, EmptyState, Locked, PageHeader, Segmented } from '../comp
 import { Icon } from '../components/icons'
 import { useStore } from '../lib/store'
 import { money, useNow } from '../lib/time'
+import { saveFile } from '../lib/download'
 import { BarList, ChartCard, COLOR, LegendItem, LineChart, StackedColumns } from './analytics/charts'
 import type { ChannelFilter, RangeDays } from './analytics/data'
 import { FUNNEL_STEPS, funnelOf, replyTimes, revenueByProcedure, toCsv, toDays, total, windowOf } from './analytics/data'
@@ -95,20 +96,16 @@ export default function Analytics() {
       ? `Instagram autopilot started on ${dayLabel(aiStartDate)}, before this range. Contact rate ${fmtPct(contactRate)}.`
       : `Contact rate ${fmtPct(contactRate)} over the range.`
 
-  const downloadCsv = () => {
-    try {
-      const blob = new Blob([toCsv(cur, showRevenue)], { type: 'text/csv' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `northlight-metrics-${range}d-${channel}.csv`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
+  const downloadCsv = async () => {
+    const file = `northlight-metrics-${range}d-${channel}.csv`
+    // saveFile asks the viewer through the preview's downloads capability when there is one, else downloads directly.
+    const outcome = await saveFile(file, toCsv(cur, showRevenue), 'text/csv')
+    if (outcome === 'saved') {
       actions.audit({ action: 'analytics.export', target: { type: 'settings', id: 'analytics', label: 'Analytics export' }, detail: `Downloaded ${range} days of daily metrics (${CHANNEL_NAME[channel]})${showRevenue ? ', including revenue' : ''}` })
       actions.toast(`Downloaded ${range} days of daily metrics as CSV`, 'success')
-    } catch {
+    } else if (outcome === 'declined') {
+      actions.toast('Download cancelled. Nothing was saved.', 'info')
+    } else {
       actions.toast('This browser blocked the download. Try again from a normal browser tab.', 'warn')
     }
   }
@@ -123,7 +120,7 @@ export default function Analytics() {
         title="Analytics"
         subtitle={`${state.settings.orgName} · last ${range} days · ${CHANNEL_NAME[channel]}`}
         actions={<>
-          <Button variant="ghost" icon="download" onClick={downloadCsv}>Download CSV</Button>
+          <Button variant="ghost" icon="download" onClick={() => void downloadCsv()}>Download CSV</Button>
           <Button variant="subtle" icon="sparkles" onClick={askClaude}>Ask Claude about these numbers</Button>
         </>}
       />

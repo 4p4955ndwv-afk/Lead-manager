@@ -93,9 +93,25 @@ export function targetLink(s: DemoState, e: AuditEntry): { page: PageId; id?: st
       return p ? { page: 'client', id: p.clientId } : null
     }
     case 'playbook': return { page: 'ai', id: t.id }
-    case 'settings': return t.id === 'ai' ? { page: 'ai' } : { page: 'settings' }
+    case 'user': return s.users.some(u => u.id === t.id) ? { page: 'team' } : null
+    case 'settings': return settingsLink(e)
     default: return null
   }
+}
+
+/** The tab a settings change was made on. */
+function settingsLink(e: AuditEntry): { page: PageId; id?: string } {
+  const a = e.action
+  if (e.target.id === 'ai' || a.startsWith('ai.')) return { page: 'ai', id: a === 'ai.mode' || a.startsWith('ai.killswitch') || a === 'ai.effort' ? undefined : 'guardrails' }
+  if (a.startsWith('security.')) return { page: 'team', id: 'security' }
+  if (a === 'audit.exported') return { page: 'team', id: 'activity' }
+  if (a.startsWith('analytics.')) return { page: 'analytics' }
+  if (/^(mcp|api|webhook)\./.test(a)) return { page: 'settings', id: 'integrations' }
+  if (a.startsWith('settings.channel')) return { page: 'settings', id: 'channels' }
+  if (a === 'settings.sla') return { page: 'settings', id: 'notifications' }
+  if (a === 'settings.price_list') return { page: 'settings', id: 'prices' }
+  if (/^(privacy\.|client\.(erased|exported)|settings\.(retention|consent))/.test(a)) return { page: 'settings', id: 'privacy' }
+  return { page: 'settings' }
 }
 
 const cell = (v: string | undefined) => {

@@ -5,7 +5,7 @@ import { useStore } from '../../lib/store'
 import type { User } from '../../lib/types'
 import { ROLE_LABEL } from '../../lib/types'
 import { ago, iso, uid } from '../../lib/time'
-import { realOverrides } from './roles'
+import { firstName, realOverrides } from './roles'
 import { RowMenu } from './RowMenu'
 import { PermissionsDrawer } from './PermissionsDrawer'
 import { RoleModal, StatusDialog, blockedReason, type StatusMode } from './PersonDialogs'
@@ -74,7 +74,7 @@ export function People({ onInvite }: { onInvite: () => void }) {
   }
 
   const menu = (u: User) => {
-    const first = u.name.split(' ')[0]
+    const first = firstName(u.name)
     const roleBlock = blockedReason(state, me, canManage, u, 'role')
     const susBlock = blockedReason(state, me, canManage, u, 'suspend')
     const remBlock = blockedReason(state, me, canManage, u, 'remove')

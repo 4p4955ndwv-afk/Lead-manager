@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, PageHeader, Stat, Tabs } from '../components/ui'
 import { useStore } from '../lib/store'
 import { People } from './team/People'
@@ -15,6 +15,15 @@ type Tab = 'people' | 'roles' | 'activity' | 'security'
 export default function Team() {
   const { state, can, route, actions } = useStore()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  // keep the active tab visible when the tab strip scrolls sideways on phones
+  useEffect(() => {
+    const strip = tabsRef.current?.querySelector<HTMLElement>('.tabs')
+    const active = strip?.querySelector<HTMLElement>('.tab.is-active')
+    if (!strip || !active) return
+    const a = active.getBoundingClientRect(), b = strip.getBoundingClientRect()
+    if (a.left < b.left || a.right > b.right) strip.scrollLeft += a.left - b.left - 16
+  }, [route.id])
   const canManage = can('team.manage')
   const canAudit = can('audit.view')
 
@@ -52,7 +61,7 @@ export default function Team() {
         <Stat label="Personal overrides" icon="shield" value={overrides} hint={overrides ? `${overrides === 1 ? 'Person' : 'People'} with custom access` : 'Everyone on their role template'} />
       </div>
 
-      <Tabs<Tab> value={tab} onChange={setTab} tabs={tabs} />
+      <div ref={tabsRef}><Tabs<Tab> value={tab} onChange={setTab} tabs={tabs} /></div>
 
       <div role="tabpanel" aria-label={tabs.find(t => t.id === tab)?.label}>
         {tab === 'people' && <People onInvite={() => setInviteOpen(true)} />}

@@ -116,6 +116,12 @@ export function editExt(d: DemoState, fn: (e: SettingsExt) => void): void {
   ;(d.settings as WithExt).ext = cur
 }
 
+/** YYYY-MM-DD in the viewer's own timezone (toISOString would give the UTC date, which is yesterday just after midnight in the UK summer). */
+export const localDay = (t = Date.now()): string => {
+  const d = new Date(t)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** Random token-safe characters (demo only; the real API mints tokens server-side). */
 export function randomChars(n: number): string {
   const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'

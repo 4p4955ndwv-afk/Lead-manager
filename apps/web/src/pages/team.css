@@ -2,6 +2,8 @@
 
 .tm-page { max-width: 1320px; grid-template-columns: minmax(0, 1fr); }
 .tm-page > [role='tabpanel'] { min-width: 0; }
+/* keep the hidden switch input inside its label, so it scrolls with drawers and tables and keyboard focus scrolls to it */
+.tm-page .toggle { position: relative; }
 .tm-page .tabs .tab, .tm-page .tabs .tab svg, .tm-page .btn svg, .tm-page .chip, .tm-page .chip svg, .tm-menu svg { flex: none; }
 .tm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 1000px) { .tm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -1,6 +1,8 @@
 /* AI & playbook page. Every class is prefixed .ai- ; colours come from tokens only. */
 
 .ai-page { max-width: 1320px; }
+/* keep the hidden switch input inside its label, so it scrolls with drawers and tables and keyboard focus scrolls to it */
+.ai-page .toggle { position: relative; }
 .ai-section-title { font-family: var(--font-body); font-size: 15px; font-weight: 600; }
 .ai-section-head { display: grid; gap: 2px; }
 .ai-nowrap { white-space: nowrap; }

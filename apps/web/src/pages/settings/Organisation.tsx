@@ -43,7 +43,12 @@ export function Organisation() {
       d.settings.timezone = tz
       d.audit.unshift({ id: uid('au'), at: iso(Date.now()), actor: d.currentUserId, action: 'settings.organisation', target: { type: 'settings', id: 'organisation', label: 'Clinic details' }, detail: changes.join('; ') })
     })
-    actions.toast('Clinic details saved', 'success')
+    // the AI's own wording is separate from the clinic name: flag it if it still uses the old name
+    const oldWord = s.orgName.split(/\s+/)[0]
+    const stale = name.trim() !== s.orgName && oldWord.length > 2 && !name.trim().toLowerCase().includes(oldWord.toLowerCase())
+      && [state.ai.disclosure, state.ai.escalationText].some(t => t.toLowerCase().includes(oldWord.toLowerCase()))
+    if (stale) actions.toast(`Clinic details saved. The AI’s own wording still says “${oldWord}”; update it in Guardrails.`, 'warn', { label: 'Edit guardrails', page: 'ai', id: 'guardrails' })
+    else actions.toast('Clinic details saved', 'success')
   }
 
   return (
