@@ -36,4 +36,9 @@ jobs:
         run: echo "::notice::Built OK. Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to deploy."
       - name: Deploy to Cloudflare Workers
         if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
-        run: npx wrangler deploy
+        run: |
+          set -o pipefail
+          npx wrangler deploy 2>&1 | tee deploy.log
+          url=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "::notice title=Live site::${url:-deployed (see log for the address)}"
+          echo "### Live site: ${url:-see the deploy log}" >> "$GITHUB_STEP_SUMMARY"
