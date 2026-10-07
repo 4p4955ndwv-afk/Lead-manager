@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "build:single": "tsc -b && vite build --mode single",
     "typecheck": "tsc -b --pretty false",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -20,6 +21,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
-    "vite-plugin-singlefile": "^2.3.3"
+    "vite-plugin-singlefile": "^2.3.3",
+    "wrangler": "^4.148.0"
   }
 }

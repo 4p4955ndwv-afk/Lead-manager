@@ -1,0 +1,13 @@
+// Cloudflare Workers config: serves the built app (dist/) as static assets on the free plan.
+// Deploy with `npm run deploy` (needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in the environment).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lead-manager",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}
